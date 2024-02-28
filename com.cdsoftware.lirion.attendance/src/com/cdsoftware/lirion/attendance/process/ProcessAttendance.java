@@ -52,7 +52,7 @@ public class ProcessAttendance extends SvrProcess{
 
 	@Override
 	protected String doIt() throws Exception {
-		// TODO Auto-generated method stub
+		
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
 		StringBuilder sql = new StringBuilder ("DELETE FROM HR_Attribute ")
 				.append("WHERE HR_Attendance_ID=").append(RECORD_ID).append (clientCheck);
@@ -62,6 +62,11 @@ public class ProcessAttendance extends SvrProcess{
 		int	no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Delete Attendance =" + no);
 		attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
+		
+		//Rango de Fecha al procesar es obligatorio en cabecera del documento
+		if(attendance.getDateTo()==null || attendance.getDateFrom()==null)
+			return "@Error@No se ha colocado un rango de fecha a procesar";
+		
 		String wherealines="HR_Attendance_ID=? AND TotalQtyOfHours is not null AND AttendanceDate between ? and ?";
 		if(p_C_BPartner_ID>0) 
 			wherealines = wherealines+" AND C_BPartner_ID="+p_C_BPartner_ID;
@@ -72,7 +77,7 @@ public class ProcessAttendance extends SvrProcess{
 				.setOrderBy(MHR_AttendanceLine.COLUMNNAME_C_BPartner_ID+","+MHR_AttendanceLine.COLUMNNAME_AttendanceDate)
 				.list();
 		if(list_attendanceline.size()==0) 
-			return "No hay marcaciones en la fecha especificada";
+			return "@Error@No hay marcaciones en la fecha especificada";
 		
 		int C_BPartner_ID = list_attendanceline.get(0).getC_BPartner_ID();
 		BigDecimal lateHour = BigDecimal.ZERO;
