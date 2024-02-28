@@ -11,7 +11,6 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
-import java.util.logging.Level;
 
 import org.compiere.model.MAttachment;
 import org.compiere.model.MAttachmentEntry;
@@ -20,12 +19,10 @@ import org.compiere.model.MRefList;
 import org.compiere.model.Query;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
-import org.compiere.util.DB;
 
-import com.cdsoftware.lirion.attendance.model.MGH_ShiftsLine;
 import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
-import com.cdsoftware.lirion.attendance.model.MMarking;
+import com.cdsoftware.lirion.attendance.model.MIAttendance;
 
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromAttachmentzk extends SvrProcess{
