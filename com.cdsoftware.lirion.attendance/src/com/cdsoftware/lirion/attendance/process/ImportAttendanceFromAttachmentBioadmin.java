@@ -97,6 +97,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		try (BufferedReader br = new BufferedReader(fileReader)) {
 			int countlines=0;
 			SimpleDateFormat dateFormat = new SimpleDateFormat(p_DateFormat, Locale.US);
+			SimpleDateFormat dateTimeFormat = new SimpleDateFormat(p_DateTimeFormat, Locale.US);
 			String inputLine;
 			ArrayList<ValueDatePair> valueDatelist = new ArrayList<>();
 			
@@ -116,7 +117,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					continue;
 				String[] csvLine = inputLine.split(cvsSplitBy);
 				String formattedDate = csvLine[1].replace("a.m.", "AM").replace("p.m.","PM");
-				Date parsedDateTime = dateFormat.parse(formattedDate);
+				Date parsedDateTime = dateTimeFormat.parse(formattedDate);
 				valueDatelist.add(new ValueDatePair(csvLine[0],parsedDateTime));
 				countlines++;
 			}
