@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.Properties;
 
+import org.adempiere.base.annotation.Callout;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.util.CLogger;
@@ -12,7 +13,7 @@ import org.compiere.util.Env;
 
 import com.cdsoftware.lirion.attendance.base.CustomCallout;
 
-
+@Callout(tableName = {"I_Marking","GH_ShiftsLine","HR_AttendanceLine"}, columnName = {"Time1","Time2","Time3","Time4"})
 public class SetQtyOfHours extends CustomCallout{
 	protected transient CLogger	log = CLogger.getCLogger (getClass());
 	
