@@ -17,8 +17,8 @@ pipeline {
             steps {
                 dir ('v10'){
                     
-                    sshagent(credentials: ['bitbucket']) {
-                    sh 'git clone git@bitbucket.org:cdsoftware/com.cdsoftware.lirion.payroll.git'
+                    withCredentials([sshUserPrivateKey(credentialsId: 'bitbucket', keyFileVariable: 'SSH_PRIVATE_KEY')]) {
+                        sh 'echo "$SSH_PRIVATE_KEY" > ssh_key && chmod 600 ssh_key && ssh-agent bash -c "ssh-add ssh_key && git clone git@bitbucket.org:cdsoftware/com.cdsoftware.lirion.payroll.git"'
                     }        
                 }
                 dir('target-platform') {
