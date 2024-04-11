@@ -17,9 +17,7 @@ pipeline {
             steps {
                 dir ('v10'){
                     
-                    withCredentials([sshUserPrivateKey(credentialsId: 'bitbucket', keyFileVariable: 'SSH_PRIVATE_KEY')]) {
-                        sh 'echo "$SSH_PRIVATE_KEY" > ssh_key && chmod 600 ssh_key && ssh-agent bash -c "ssh-add ssh_key && git clone git@bitbucket.org:cdsoftware/com.cdsoftware.lirion.payroll.git"'
-                    }        
+                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'bitbucket', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.lirion.payroll.git']])
                 }
                 dir('target-platform') {
                     git branch: '10', url: 'https://github.com/ingeint/idempiere-target-platform-plugin.git'
