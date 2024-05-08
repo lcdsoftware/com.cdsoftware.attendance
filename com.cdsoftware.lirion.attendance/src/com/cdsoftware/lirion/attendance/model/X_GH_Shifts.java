@@ -25,6 +25,7 @@ import org.compiere.model.*;
 /** Generated Model for GH_Shifts
  *  @author iDempiere (generated) 
  *  @version Release 7.1 - $Id$ */
+@org.adempiere.base.Model(table="GH_Shifts")
 public class X_GH_Shifts extends PO implements I_GH_Shifts, I_Persistent 
 {
 

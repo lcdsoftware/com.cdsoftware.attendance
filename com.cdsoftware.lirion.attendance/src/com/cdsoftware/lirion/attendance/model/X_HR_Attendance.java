@@ -25,6 +25,7 @@ import org.compiere.model.*;
 /** Generated Model for HR_Attendance
  *  @author iDempiere (generated) 
  *  @version Release 7.1 - $Id$ */
+@org.adempiere.base.Model(table="HR_Attendance")
 public class X_HR_Attendance extends PO implements I_HR_Attendance, I_Persistent 
 {
 

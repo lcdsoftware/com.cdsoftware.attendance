@@ -27,6 +27,7 @@ import org.compiere.util.Env;
 /** Generated Model for GH_ShiftsLine
  *  @author iDempiere (generated) 
  *  @version Release 7.1 - $Id$ */
+@org.adempiere.base.Model(table="GH_ShiftsLine")
 public class X_GH_ShiftsLine extends PO implements I_GH_ShiftsLine, I_Persistent 
 {
 

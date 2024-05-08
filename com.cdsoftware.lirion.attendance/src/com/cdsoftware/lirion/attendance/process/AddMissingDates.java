@@ -58,7 +58,6 @@ public class AddMissingDates extends CustomProcess{
 		List<LocalDate> p_dateList=null;
 		ZoneId defaultZoneId = ZoneId.systemDefault();
 		int count=0;
-		int sizeList = 0; 
 		if(p_HR_Attendance_ID>0) {
 			atlist.add(new MHR_Attendance(getCtx(), p_HR_Attendance_ID, get_TrxName()));
 
@@ -71,12 +70,14 @@ public class AddMissingDates extends CustomProcess{
 		}
 		else
 			return("@Error@: "+Msg.translate(Env.getCtx(), "AddMissingDatesNoParam"));
-		sizeList = atlist.size();
-		log.warning(sizeList+"");
 		
 		MHR_Attendance at = null;
 		if(p_HR_Attendance_ID>0) {
 			at = new MHR_Attendance(getCtx(), p_HR_Attendance_ID, get_TrxName());
+			if(at.getDateFrom()==null)
+				return "@Error@La Asistencia no tiene Fecha desde, por favor verififique el registro";
+			if(at.getDateTo()==null)
+				return "@Error@La Asistencia no tiene Fecha hasta, por favor verififique el registro";
 			p_dateList = getDatesBetween(at.getDateFrom().toLocalDateTime().toLocalDate(),at.getDateTo().toLocalDateTime().toLocalDate());
 		}				
 		else
@@ -120,10 +121,9 @@ public class AddMissingDates extends CustomProcess{
 							get_TrxName()).first();
 					if(atline==null) {
 						count++;
-						log.warning("Tercero"+c_bpartner_id+" fecha "+fecha);
+						//log.warning("Tercero"+c_bpartner_id+" fecha "+fecha);
 						MHR_AttendanceLine newline = new MHR_AttendanceLine(getCtx(),0,get_TrxName());
 						newline.setC_BPartner_ID(c_bpartner_id);
-						newline.setWeekDay(MSG_InvalidArguments);
 						newline.setAttendanceDate(Timestamp.valueOf(fecha.atStartOfDay()));
 						newline.setQtyOfHours1(Env.ZERO);
 						newline.setQtyOfHours2(Env.ZERO);

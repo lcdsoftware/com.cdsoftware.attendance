@@ -27,6 +27,7 @@ import org.compiere.util.Env;
 /** Generated Model for I_Marking
  *  @author iDempiere (generated) 
  *  @version Release 7.1 - $Id$ */
+@org.adempiere.base.Model(table="I_Marking")
 public class X_I_Marking extends PO implements I_I_Marking, I_Persistent 
 {
 

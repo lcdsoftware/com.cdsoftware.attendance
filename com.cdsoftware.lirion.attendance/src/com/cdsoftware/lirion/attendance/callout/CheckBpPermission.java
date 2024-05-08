@@ -14,7 +14,7 @@ import org.compiere.util.Msg;
 
 import com.cdsoftware.lirion.attendance.base.CustomCallout;
 
-@Callout(tableName = "MRequest", columnName = {"CDS_R_RequestTypeDetails_ID","R_RequestType_ID","C_BPartner_ID","CDS_StartDate"})
+@Callout(tableName = "M_Request", columnName = {"CDS_R_RequestTypeDetails_ID","R_RequestType_ID","C_BPartner_ID","CDS_StartDate"})
 public class CheckBpPermission extends CustomCallout{
 	protected CLogger			log = CLogger.getCLogger (getClass());
 	@Override

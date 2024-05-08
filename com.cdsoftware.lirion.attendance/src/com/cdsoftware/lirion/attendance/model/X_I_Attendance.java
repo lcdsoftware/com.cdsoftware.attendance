@@ -25,6 +25,7 @@ import org.compiere.model.*;
 /** Generated Model for I_Attendance
  *  @author iDempiere (generated) 
  *  @version Release 7.1 - $Id$ */
+@org.adempiere.base.Model(table="I_Attendance")
 public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent 
 {
 
