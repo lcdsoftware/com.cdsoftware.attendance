@@ -104,7 +104,7 @@ public class CalculateExtraHour extends SvrProcess{
 		int p_GH_Shifts_ID = bpartner.get_ValueAsInt("GH_Shifts_ID");
 		
 		if(p_GH_Shifts_ID == 0) {
-			p_GH_Shifts_ID = 1000001; //crear el check de predeterminado en el turno para que no este fijo
+			p_GH_Shifts_ID = 1000000; //crear el check de predeterminado en el turno para que no este fijo
 			
 		}
 		MGH_Shifts shift = new MGH_Shifts(getCtx(), p_GH_Shifts_ID , get_TrxName());

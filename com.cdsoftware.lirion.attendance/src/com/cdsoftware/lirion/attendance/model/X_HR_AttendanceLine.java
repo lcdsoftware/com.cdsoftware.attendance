@@ -27,6 +27,8 @@ import org.compiere.util.Env;
 /** Generated Model for HR_AttendanceLine
  *  @author iDempiere (generated) 
  *  @version Release 7.1 - $Id$ */
+
+@org.adempiere.base.Model(table="HR_AttendanceLine")
 public class X_HR_AttendanceLine extends PO implements I_HR_AttendanceLine, I_Persistent 
 {
 

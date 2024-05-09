@@ -141,7 +141,11 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					i=1;
 					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
 					al.setHR_Attendance_ID(attendance.get_ID());
-					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, "REPLACE (trim(taxid), '-', '')=?", get_TrxName()).setParameters(line.getValue()).first();
+					StringBuilder whereclause = new StringBuilder();
+					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')=?");
+					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, 
+							
+							whereclause.toString(), get_TrxName()).setParameters(line.getValue()).first();
 					if(employed==null) {
 						if(lastnotfoundbp.compareTo(line.getValue())!=0) {		
 							lastnotfoundbp=line.getValue();
