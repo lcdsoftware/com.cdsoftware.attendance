@@ -27,7 +27,9 @@ public class CalloutFactory extends AnnotationBasedColumnCalloutFactory {
 
 	@Override
 	protected String[] getPackages() {
-		return new String[] {"com.cdsoftware.lirion.attendance.model", "com.cdsoftware.lirion.attendance.callout"};
+		return new String[] {"com.cdsoftware.lirion.attendance.model", 
+				"com.cdsoftware.lirion.attendance.callout",
+				"com.cds.lirion.request.callout"};
 	}
 
 }
