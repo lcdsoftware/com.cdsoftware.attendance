@@ -27,7 +27,8 @@ public class ProcessFactory extends AnnotationBasedProcessFactory {
 
 	@Override
 	protected String[] getPackages() {
-		return new String[] { "com.cdsoftware.lirion.attendance.process" };
+		return new String[] { "com.cdsoftware.lirion.attendance.process",
+				"com.cds.lirion.request.process"};
 	}
 
 }
