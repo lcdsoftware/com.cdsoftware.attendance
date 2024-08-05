@@ -64,7 +64,7 @@ public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
         MHR_Attendance attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
         MAttachment attachment = attendance.getAttachment();
         Timestamp time1 = null, time2 = null, time3 = null, time4 = null;
-        String day = "", emp = "", cvsSplitBy = ",";
+        String emp = "", cvsSplitBy = ",";
         int alID = 0, i = 1;
 
         if (attachment == null) {
@@ -117,12 +117,9 @@ public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
                     .sorted(compareByName)
                     .collect(Collectors.toList());
 
-            for (ValueDatePair line : sortedvalueDatelist) {
-                System.out.println(line.getValue() + "," + line.getTime());
-            }
-
             String lastnotfoundbp = "";
             int count = 0;
+            String lastDay = ""; // Variable para guardar el último día procesado
             for (ValueDatePair line : sortedvalueDatelist) {
                 count++;
                 if (line.getValue().length() == 0)
@@ -130,8 +127,14 @@ public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
                 Date parsedDateTime, parsedDate;
                 parsedDateTime = line.getTime();
                 parsedDate = dateFormat.parse(dateFormat.format(parsedDateTime));
+                String currentDay = dateFormat.format(parsedDate); // Convertir la fecha a un formato de cadena para comparación
 
-                if (day.compareTo(parsedDate.toString()) != 0 || emp.compareTo(line.getValue().trim()) != 0) {
+                // Filtra las marcas del empleado actual en el día actual
+                List<ValueDatePair> employeeDayMarks = sortedvalueDatelist.stream()
+                        .filter(d -> d.getValue().equals(line.getValue()) && dateFormat.format(d.getTime()).equals(currentDay))
+                        .collect(Collectors.toList());
+
+                if (!lastDay.equals(currentDay) || !emp.equals(line.getValue().trim())) {
                     i = 1;
                     MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
                     al.setHR_Attendance_ID(attendance.get_ID());
@@ -140,7 +143,7 @@ public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
                     MBPartner employed = new Query(getCtx(), MBPartner.Table_Name,
                             whereclause.toString(), get_TrxName()).setParameters(line.getValue()).first();
                     if (employed == null) {
-                        if (lastnotfoundbp.compareTo(line.getValue()) != 0) {
+                        if (!lastnotfoundbp.equals(line.getValue())) {
                             lastnotfoundbp = line.getValue();
                             usersNotFoundList.append(line.getValue() + ",");
                             log.warning("No se encuentra el empleado " + line.getValue());
@@ -154,13 +157,24 @@ public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
                     al.setTime1(time1);
                     al.saveEx();
                     this.statusUpdate("Procesando: " + count + "/" + sortedvalueDatelist.size() + " " + employed.getValue() + " " + employed.getName() + " " + al.getAttendanceDate());
-                    day = parsedDate.toString();
+                    lastDay = currentDay; // Actualiza el último día procesado
                     emp = line.getValue();
                     alID = al.get_ID();
                 } else {
                     MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
                     if (line.getTime() != null) {
-                        if (i == 2) {
+                        if (employeeDayMarks.size() == 2) {
+                            // Si solo hay dos marcas de tiempo, la segunda se asigna a time4
+                            time4 = new Timestamp(parsedDateTime.getTime());
+                            al.setTime4(time4);
+                            BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+                            if (time1 != null && time4 != null) {
+                                QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time1.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), RoundingMode.HALF_EVEN);
+                            }
+                            al.setQtyOfHours2(QtyOfHours2);
+                            al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
+                        } else if (i == 2) {
+                            // Si hay más de dos marcas, la segunda se asigna a time2
                             time2 = new Timestamp(parsedDateTime.getTime());
                             al.setTime2(time2);
                             BigDecimal QtyOfHours1 = BigDecimal.ZERO;
@@ -169,12 +183,10 @@ public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
                             }
                             al.setQtyOfHours1(QtyOfHours1);
                             al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
-                        }
-                        if (i == 3) {
+                        } else if (i == 3) {
                             time3 = new Timestamp(parsedDateTime.getTime());
                             al.setTime3(time3);
-                        }
-                        if (i >= 4) {
+                        } else if (i >= 4) {
                             time4 = new Timestamp(parsedDateTime.getTime());
                             al.setTime4(time4);
                             BigDecimal QtyOfHours2 = BigDecimal.ZERO;
