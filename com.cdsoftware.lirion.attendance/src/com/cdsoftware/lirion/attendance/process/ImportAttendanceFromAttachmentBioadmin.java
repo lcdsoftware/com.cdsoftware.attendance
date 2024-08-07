@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -157,7 +158,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					al.setC_BPartner_ID(employed.getC_BPartner_ID());
 					al.setWeekDay(getWeekDayValue(parsedDate));
 					al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
-					time1 = new Timestamp(parsedDateTime.getTime()); 
+					time1 = formatTimeField(parsedDateTime);
 					al.setTime1(time1);
 					al.saveEx();
 					this.statusUpdate("Procesando: "+count+"/"+sortedvalueDatelist.size()+" "+employed.getValue()+" "+employed.getName()+" "+al.getAttendanceDate());
@@ -168,25 +169,25 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
 					if(line.getTime()!=null) {
 						if(i==2) {
-							time2 = new Timestamp(parsedDateTime.getTime());
+							time2 = formatTimeField(parsedDateTime);
 							al.setTime2(time2);
 							BigDecimal QtyOfHours1=BigDecimal.ZERO;
 							if(time1!=null && time2!=null) {
-								QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),RoundingMode.HALF_EVEN);
+								QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
 							}
 							al.setQtyOfHours1(QtyOfHours1);
 							al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));							
 						}
 						if(i==3) {
-							time3 = new Timestamp(parsedDateTime.getTime());
+							time3 = formatTimeField(parsedDateTime);
 							al.setTime3(time3);
 						}
 						if(i>=4) {
-							time4 = new Timestamp(parsedDateTime.getTime());
+							time4 = formatTimeField(parsedDateTime);
 							al.setTime4(time4);
 							BigDecimal QtyOfHours2=BigDecimal.ZERO;
 							if(time3!=null && time4!=null) {
-								QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),RoundingMode.HALF_EVEN);
+								QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
 							}
 							al.setQtyOfHours2(QtyOfHours2);
 							al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
@@ -373,5 +374,15 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		time = time.plusHours(aux.getHour());
 		time = time.plusMinutes(aux.getMinute());
 		return time;
+	}
+	
+	private Timestamp formatTimeField(Date dateTime) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(dateTime);
+        cal.set(Calendar.YEAR, 1970);
+        cal.set(Calendar.MONTH, Calendar.JANUARY);
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        Date newDate = cal.getTime();
+		return new Timestamp(newDate.getTime());
 	}
 }
