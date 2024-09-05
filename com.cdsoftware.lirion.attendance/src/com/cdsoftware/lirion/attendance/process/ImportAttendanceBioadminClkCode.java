@@ -48,6 +48,7 @@ import com.cdsoftware.lirion.attendance.model.MMarking;
  * @author angel
  *
  */
+@org.adempiere.base.annotation.Process
 public class ImportAttendanceBioadminClkCode extends SvrProcess{
 
 	private String ATTENDANCE_FILE_LOCATION="";
