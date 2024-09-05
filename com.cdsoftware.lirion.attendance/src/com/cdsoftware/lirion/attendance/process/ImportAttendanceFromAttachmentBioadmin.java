@@ -163,7 +163,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					    .replace("a. m.", "AM").replace("p. m.", "PM");
 				
 				Date parsedDateTime = dateTimeFormat.parse(formattedDate);
-				String bpCode=csvLine[bpIndex];
+				String bpCode=csvLine[bpIndex].trim();
 				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode,parsedDateTime);
 				if(p_HasHoursColumns) {
 					SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm", Locale.US);
