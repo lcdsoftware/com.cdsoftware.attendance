@@ -207,7 +207,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
 					al.setHR_Attendance_ID(attendance.get_ID());
 					StringBuilder whereclause = new StringBuilder();
-					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')=?");
+					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
 					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, 							
 							whereclause.toString(), get_TrxName()).setParameters(line.getValue()).first();
 					if(employed==null) {
@@ -533,9 +533,19 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: "+usersNotFoundList);
 				attendance.saveEx();
 			}
-			String newfile=ATTENDANCE_FILE_LOCATION+"procesado/"+csvFile.getName().substring(0,  (int)(csvFile.getName().length())-4)+"-"+firstDate.toString()+".csv";
+		      // Mover el archivo CSV a la carpeta procesado
+	        String newfile = ATTENDANCE_FILE_LOCATION + "procesado/" + csvFile.getName().substring(0, (int)(csvFile.getName().length()) - 4) + ".csv";
+	        log.warning("Moviendo archivo a :" + newfile);
+	        boolean moved = csvFile.renameTo(new File(newfile));
+	        if (moved) {
+	            log.info("Archivo movido exitosamente a: " + newfile);
+	        } else {
+	            log.severe("Error al mover el archivo a: " + newfile);
+	        }
+	        
+			/*String newfile=ATTENDANCE_FILE_LOCATION+"procesado/"+csvFile.getName().substring(0,  (int)(csvFile.getName().length())-4)+"-"+firstDate.toString()+".csv";
 			log.warning("Moviendo archivo a :"+newfile);
-			csvFile.renameTo(new File(newfile));
+			csvFile.renameTo(new File(newfile));*/
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -827,14 +837,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			al.setTime2(null);
 			al.setQtyOfHours1(Env.ZERO);
 			al.saveEx();
-		}	
-		else if(al.getTime1()!=null && al.getTime2()!=null) {
-			al.setTime4(al.getTime2());
-			al.setTime2(null);
-			al.setQtyOfHours1(Env.ZERO);
-			al.saveEx();
-		}
-		
+		}			
 	}
 	
 }
