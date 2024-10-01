@@ -381,10 +381,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 				String formattedDate = csvLine[dateIndex]
 					    .replace("a.m.", "AM").replace("p.m.", "PM")
 					    .replace("a. m.", "AM").replace("p. m.", "PM");
+				formattedDate = formattedDate.replace("\"", "");
 				
 				Date parsedDateTime = dateTimeFormat.parse(formattedDate);
 				firstDate = extraerFecha(parsedDateTime, dateTimeFormat);
 				String bpCode=csvLine[bpIndex];
+				bpCode = bpCode.replace("\"", "");
 				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode,parsedDateTime);
 				if(p_HasHoursColumns) {
 					SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm", Locale.US);
@@ -396,7 +398,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 				         if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
 				             parsedDateTimes[i] = formatTime.parse(csvLine[index]
 				            		 .replace("a.m.", "AM").replace("p.m.", "PM")
-									 .replace("a. m.", "AM").replace("p. m.", "PM"));
+									 .replace("a. m.", "AM").replace("p. m.", "PM").replace("\"", ""));
 				         }
 				     }
 					atcsvLine.setTime1(formatTimeField(parsedDateTimes[0]));
