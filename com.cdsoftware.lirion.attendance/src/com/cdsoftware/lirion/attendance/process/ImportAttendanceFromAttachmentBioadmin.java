@@ -6,6 +6,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -535,7 +537,47 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: "+usersNotFoundList);
 				attendance.saveEx();
 			}
-		      // Mover el archivo CSV a la carpeta procesado
+			// Mover el archivo CSV a la carpeta procesado
+			String newFileName = ATTENDANCE_FILE_LOCATION + "/procesado/" + csvFile.getName().substring(0, csvFile.getName().length() - 4) + "-" +  ".csv";
+
+			// Verificar si la carpeta de destino existe, si no, crearla
+			File destDir = new File(ATTENDANCE_FILE_LOCATION + "/procesado/");
+			if (!destDir.exists()) {
+			    boolean dirCreated = destDir.mkdirs();
+			    if (!dirCreated) {
+			        log.severe("No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath());
+			        return "@Error@ No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath();
+			    }
+			}
+
+			File newFile = new File(newFileName);
+			log.warning("Moviendo archivo a: " + newFile.getAbsolutePath());
+
+			// Intentar mover el archivo
+			boolean moved = csvFile.renameTo(newFile);
+			if (moved) {
+			    log.info("Archivo movido exitosamente a: " + newFile.getAbsolutePath());
+			} else {
+			    log.severe("Error al mover el archivo a: " + newFile.getAbsolutePath());
+
+			    // Intentar copiar el archivo como alternativa
+			    try {
+			        Files.copy(csvFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			        log.info("Archivo copiado exitosamente a: " + newFile.getAbsolutePath());
+			        
+			        // Eliminar el archivo original después de copiar
+			        boolean deleted = csvFile.delete();
+			        if (deleted) {
+			            log.info("Archivo original eliminado después de copiar: " + csvFile.getAbsolutePath());
+			        } else {
+			            log.severe("Error al eliminar el archivo original: " + csvFile.getAbsolutePath());
+			        }
+			    } catch (IOException e) {
+			        log.severe("Error al copiar el archivo: " + e.getMessage());
+			        e.printStackTrace();
+			    }
+			}
+		    /*  // Mover el archivo CSV a la carpeta procesado
 	        String newfile = ATTENDANCE_FILE_LOCATION + "procesado/" + csvFile.getName().substring(0, (int)(csvFile.getName().length()) - 4) + ".csv";
 	        log.warning("Moviendo archivo a :" + newfile);
 	        boolean moved = csvFile.renameTo(new File(newfile));
