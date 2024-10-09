@@ -22,6 +22,7 @@ import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
 
+
 /**
  * Proceso para importar marcaciones desde la tabla I_Attendance
  * 
@@ -30,16 +31,18 @@ import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromI_Attendance extends SvrProcess {
 
-    private int RECORD_ID = 0;
-
+   // private int RECORD_ID = 0;
+	private String pDevice_Name = "";
     @Override
     protected void prepare() {
         ProcessInfoParameter[] parameters = getParameter();
         for (ProcessInfoParameter para : parameters) {
             String name = para.getParameterName();
             if (para.getParameter() == null);
+			else if (name.equals("Device_Name"))
+				pDevice_Name = para.getParameterAsString();
         }
-        RECORD_ID = getRecord_ID();
+       // RECORD_ID = getRecord_ID();
     }
 
     @Override
@@ -50,24 +53,30 @@ public class ImportAttendanceFromI_Attendance extends SvrProcess {
 
     public String writeAttendance() throws Exception {
         StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
-        StringBuilder sql = new StringBuilder("DELETE FROM HR_AttendanceLine ")
+        /*StringBuilder sql = new StringBuilder("DELETE FROM HR_AttendanceLine ")
                 .append("WHERE HR_Attendance_ID=").append(RECORD_ID).append(clientCheck);
         int no = DB.executeUpdate(sql.toString(), get_TrxName());
-        if (log.isLoggable(Level.FINE)) log.fine("Delete Attendance =" + no);
+        if (log.isLoggable(Level.FINE)) log.fine("Delete Attendance =" + no);*/
 
         MHR_Attendance attendance;
-        if (RECORD_ID > 0)
+       /* if (RECORD_ID > 0)
             attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
-        else
+        else*/
             attendance = new MHR_Attendance(getCtx(), 0, get_TrxName());
 
-        List<X_I_Attendance> attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "", get_TrxName())
-                .setOrderBy("HR_ClockCode, Date_Stamp").list();
+        List<X_I_Attendance> attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Device_Name=? AND Processed!='Y'", get_TrxName())
+                //.setOrderBy("HR_ClockCode, Date_Stamp").list();
+        		.setClient_ID()
+        		.setOrderBy("Device_Name,HR_ClockCode, Date_Stamp ASC")
+        		.setParameters(pDevice_Name)
+        		.list();
 
         if (attendanceList.isEmpty()) {
             return "@Error@No hay registros en la tabla I_Attendance";
         }
-
+        else
+        	attendance.saveEx();
+        
         SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd-yyyy h:mm a", Locale.getDefault());
         SimpleDateFormat dateFormat2 = new SimpleDateFormat("MM-dd-yyyy", Locale.getDefault());
 
@@ -75,16 +84,20 @@ public class ImportAttendanceFromI_Attendance extends SvrProcess {
         String emp = "";
         int alID = 0;
         int i = 1;
+        int j = 0;
         Timestamp time1 = null;
         Timestamp time2 = null;
         Timestamp time3 = null;
         Timestamp time4 = null;
-
+        Timestamp startDate = new Timestamp(System.currentTimeMillis());
+        Timestamp endDate = null;
+        Timestamp parsedDate = null;
         for (X_I_Attendance record : attendanceList) {
             String hrClockCode = record.getHR_ClockCode().trim();
             String markingDateStr = dateFormat.format(record.getDate_Stamp());
-            Timestamp parsedDate = new Timestamp(record.getDate_Stamp().getTime());
-
+            parsedDate = new Timestamp(record.getDate_Stamp().getTime());
+            if(j==0 || startDate.compareTo(parsedDate)>0)
+            	startDate =  parsedDate;
             if (!day.equals(dateFormat2.format(parsedDate)) || !emp.equals(hrClockCode)) {
                 i = 1;
                 MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
@@ -145,8 +158,15 @@ public class ImportAttendanceFromI_Attendance extends SvrProcess {
                 }
                 al.saveEx();
             }
-            i++;
+            record.set_ValueNoCheck("Processed", true);
+            record.saveEx();
+            i++;j++;
         }
+        endDate = parsedDate;
+        attendance.setDateFrom(startDate);
+        attendance.setDateTo(endDate);
+        attendance.setName(startDate.toString().concat(" to ").concat(endDate.toString()));
+        attendance.saveEx();
         return null;
     }
 
