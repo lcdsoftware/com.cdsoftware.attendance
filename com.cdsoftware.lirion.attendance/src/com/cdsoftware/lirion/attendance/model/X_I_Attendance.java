@@ -32,7 +32,7 @@ public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20240808L;
+	private static final long serialVersionUID = 20241009L;
 
     /** Standard Constructor */
     public X_I_Attendance (Properties ctx, int I_Attendance_ID, String trxName)
@@ -275,16 +275,16 @@ public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent
 		return (String)get_Value(COLUMNNAME_Full_Name);
 	}
 
-	/** Set  Code on Dial Clock.
-		@param HR_ClockCode  Code on Dial Clock
+	/** Set Clock Code.
+		@param HR_ClockCode Clock Code
 	*/
 	public void setHR_ClockCode (String HR_ClockCode)
 	{
 		set_Value (COLUMNNAME_HR_ClockCode, HR_ClockCode);
 	}
 
-	/** Get  Code on Dial Clock.
-		@return  Code on Dial Clock	  */
+	/** Get Clock Code.
+		@return Clock Code	  */
 	public String getHR_ClockCode()
 	{
 		return (String)get_Value(COLUMNNAME_HR_ClockCode);
@@ -339,6 +339,51 @@ public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent
 	public String getID_Card()
 	{
 		return (String)get_Value(COLUMNNAME_ID_Card);
+	}
+
+	/** Set Processed.
+		@param Processed The document has been processed
+	*/
+	public void setProcessed (boolean Processed)
+	{
+		set_Value (COLUMNNAME_Processed, Boolean.valueOf(Processed));
+	}
+
+	/** Get Processed.
+		@return The document has been processed
+	  */
+	public boolean isProcessed()
+	{
+		Object oo = get_Value(COLUMNNAME_Processed);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Process Now.
+		@param Processing Process Now
+	*/
+	public void setProcessing (boolean Processing)
+	{
+		set_Value (COLUMNNAME_Processing, Boolean.valueOf(Processing));
+	}
+
+	/** Get Process Now.
+		@return Process Now	  */
+	public boolean isProcessing()
+	{
+		Object oo = get_Value(COLUMNNAME_Processing);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
 	}
 
 	/** Set Skin Temperature.

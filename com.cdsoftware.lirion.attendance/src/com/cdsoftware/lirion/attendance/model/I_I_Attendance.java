@@ -32,7 +32,7 @@ public interface I_I_Attendance
     /** TableName=I_Attendance */
     public static final String Table_Name = "I_Attendance";
 
-    /** AD_Table_ID=1000023 */
+    /** AD_Table_ID=1000036 */
     public static final int Table_ID = MTable.getTable_ID(Table_Name);
 
     KeyNamePair Model = new KeyNamePair(Table_ID, Table_Name);
@@ -197,10 +197,10 @@ public interface I_I_Attendance
     /** Column name HR_ClockCode */
     public static final String COLUMNNAME_HR_ClockCode = "HR_ClockCode";
 
-	/** Set  Code on Dial Clock	  */
+	/** Set Clock Code	  */
 	public void setHR_ClockCode (String HR_ClockCode);
 
-	/** Get  Code on Dial Clock	  */
+	/** Get Clock Code	  */
 	public String getHR_ClockCode();
 
     /** Column name I_Attendance_ID */
@@ -242,6 +242,28 @@ public interface I_I_Attendance
 	  * The record is active in the system
 	  */
 	public boolean isActive();
+
+    /** Column name Processed */
+    public static final String COLUMNNAME_Processed = "Processed";
+
+	/** Set Processed.
+	  * The document has been processed
+	  */
+	public void setProcessed (boolean Processed);
+
+	/** Get Processed.
+	  * The document has been processed
+	  */
+	public boolean isProcessed();
+
+    /** Column name Processing */
+    public static final String COLUMNNAME_Processing = "Processing";
+
+	/** Set Process Now	  */
+	public void setProcessing (boolean Processing);
+
+	/** Get Process Now	  */
+	public boolean isProcessing();
 
     /** Column name Skin_Temperature */
     public static final String COLUMNNAME_Skin_Temperature = "Skin_Temperature";
