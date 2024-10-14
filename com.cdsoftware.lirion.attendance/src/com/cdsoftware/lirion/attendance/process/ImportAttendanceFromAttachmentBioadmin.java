@@ -12,6 +12,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
@@ -538,8 +539,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 				attendance.saveEx();
 			}
 			// Mover el archivo CSV a la carpeta procesado
-			String newFileName = ATTENDANCE_FILE_LOCATION + "/procesado/" + csvFile.getName().substring(0, csvFile.getName().length() - 4) + "-" +  ".csv";
-
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+	        String dateTimeSuffix = LocalDateTime.now().format(formatter);
+	        
+			String newFileName = ATTENDANCE_FILE_LOCATION + "/procesado/" + csvFile.getName().substring(0, csvFile.getName().length() - 4);
+			newFileName = newFileName+"_"+dateTimeSuffix+".csv";;
+			
 			// Verificar si la carpeta de destino existe, si no, crearla
 			File destDir = new File(ATTENDANCE_FILE_LOCATION + "/procesado/");
 			if (!destDir.exists()) {
