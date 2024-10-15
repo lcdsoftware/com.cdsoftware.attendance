@@ -18,7 +18,6 @@ import org.compiere.process.ProcessInfoParameter;
 import com.cdsoftware.lirion.attendance.base.CustomProcess;
 import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
 
-
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromFile extends CustomProcess {
 
@@ -67,18 +66,19 @@ public class ImportAttendanceFromFile extends CustomProcess {
         return "Datos importados correctamente.";
     }
 
-    private void processFile(File file) throws IOException, SQLException {
+    private void processFile(File file) throws Exception {
         String line;
         String cvsSplitBy = ",";
 
+        // Usamos try-with-resources para asegurar que el archivo se cierre correctamente
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            // Discard the first line (headers)
+            // Descartar la primera línea (encabezados)
             br.readLine();
 
             while ((line = br.readLine()) != null) {
                 String[] fields = line.split(cvsSplitBy);
 
-                log.info("Procesando linea: " + line);
+                log.info("Procesando línea: " + line);
 
                 if (fields.length < 16) {
                     String[] paddedFields = new String[16];
@@ -89,7 +89,7 @@ public class ImportAttendanceFromFile extends CustomProcess {
                     fields = paddedFields;
                 }
 
-                // Log the fields being processed
+                // Loguear los campos procesados
                 for (int i = 0; i < fields.length; i++) {
                     log.info("Field " + i + ": " + fields[i]);
                 }
@@ -117,21 +117,30 @@ public class ImportAttendanceFromFile extends CustomProcess {
                     attendance.setCard_Reader(fields[14].trim());
                     attendance.setDirection(fields[15].trim());
 
-                    // Save the record
+                    // Guardar el registro
                     if (!attendance.save()) {
-                        throw new Exception("No se Pudo guardar el registro: " + attendance.toString());
+                        throw new Exception("No se pudo guardar el registro: " + attendance.toString());
                     }
                 } catch (Exception e) {
-                    log.log(Level.SEVERE, "Error procesando linea: " + line, e);
+                    log.log(Level.SEVERE, "Error procesando línea: " + line, e);
+                    throw e; // Si hay un error al guardar, lanzar excepción para manejar rollback
                 }
             }
 
-            // Move the file to the processed directory
+            // Commit de la transacción tras procesar todo el archivo
+            
+            br.close();
+            // Ahora mover el archivo solo si el commit fue exitoso
             moveFileToProcessedDirectory(file);
-            commitEx();
+            
         } catch (IOException e) {
-            log.log(Level.SEVERE, "Error leyendo el archivo CSV ", e);
-            throw new IOException("Error leyendo el archivo CSV ", e);
+            log.log(Level.SEVERE, "Error leyendo el archivo CSV", e);
+            throw new IOException("Error leyendo el archivo CSV", e);
+        } catch (Exception e) {
+            // Si hay algún error procesando el archivo o guardando datos, hacer rollback
+            rollback(); // Asegurar rollback en caso de fallo
+            log.log(Level.SEVERE, "Error en el procesamiento", e);
+            throw e;
         }
     }
 
@@ -153,12 +162,12 @@ public class ImportAttendanceFromFile extends CustomProcess {
             processedDir.mkdirs();
         }
 
-        // Add timestamp to the file name to make it unique
+        // Añadir timestamp al nombre del archivo para hacerlo único
         String newFileName = getUniqueFileName(processedDir, file.getName());
         File processedFile = new File(processedDir, newFileName);
 
         Files.move(file.toPath(), processedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        log.info("File moved to processed directory: " + processedFile.getPath());
+        log.info("Archivo movido al directorio procesado: " + processedFile.getPath());
     }
 
     private String getUniqueFileName(File directory, String fileName) {
@@ -173,11 +182,12 @@ public class ImportAttendanceFromFile extends CustomProcess {
         String timestamp = sdf.format(new Date());
 
         String newFileName = name + "_" + timestamp + extension;
-        File file = new File(directory, newFileName);
+        File file = new File(directory, newFileName); 
         while (file.exists()) {
             timestamp = sdf.format(new Date());
             newFileName = name + "_" + timestamp + extension;
             file = new File(directory, newFileName);
+            
         }
         return newFileName;
     }
