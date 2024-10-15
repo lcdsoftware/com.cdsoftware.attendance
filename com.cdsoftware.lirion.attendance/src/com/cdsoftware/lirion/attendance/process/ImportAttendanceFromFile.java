@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -66,7 +67,7 @@ public class ImportAttendanceFromFile extends CustomProcess {
         return "Datos importados correctamente.";
     }
 
-    private void processFile(File file) throws IOException {
+    private void processFile(File file) throws IOException, SQLException {
         String line;
         String cvsSplitBy = ",";
 
@@ -127,6 +128,7 @@ public class ImportAttendanceFromFile extends CustomProcess {
 
             // Move the file to the processed directory
             moveFileToProcessedDirectory(file);
+            commitEx();
         } catch (IOException e) {
             log.log(Level.SEVERE, "Error leyendo el archivo CSV ", e);
             throw new IOException("Error leyendo el archivo CSV ", e);
