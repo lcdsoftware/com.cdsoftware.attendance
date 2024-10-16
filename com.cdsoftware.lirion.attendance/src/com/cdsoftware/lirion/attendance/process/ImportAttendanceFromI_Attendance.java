@@ -23,7 +23,6 @@ import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
 
-
 /**
  * Proceso para importar marcaciones desde la tabla I_Attendance
  * 
@@ -40,8 +39,8 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
         for (ProcessInfoParameter para : parameters) {
             String name = para.getParameterName();
             if (para.getParameter() == null);
-			else if (name.equals("Device_Name"))
-				pDevice_Name = para.getParameterAsString();
+            else if (name.equals("Device_Name"))
+                pDevice_Name = para.getParameterAsString();
         }
     }
 
@@ -92,19 +91,22 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
             if (j == 0 || startDate.compareTo(parsedDate) > 0)
                 startDate = parsedDate;
             
-            // Obtener el empleado
-            int employedID = DB.getSQLValueEx(get_TrxName(), "SELECT C_BPartner_ID FROM C_BPartner WHERE hr_clockcode = ?", hrClockCode);
+            // Obtener el empleado por HR_ClockCode
+            int employedID = DB.getSQLValueEx(get_TrxName(), "SELECT C_BPartner_ID FROM C_BPartner WHERE REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')", hrClockCode);
 
-            // Si no se encuentra el empleado, registrar un error y continuar con el siguiente registro
-            if (employedID <= 0) {
-                log.severe("No se encuentra el empleado " + hrClockCode);
-                log.warning("@Error@ No se encuentra el empleado " + hrClockCode);
-                continue; // Saltar este registro, no lo marcaremos como procesado
+                   
+
+             if (employedID <= 0) {
+                    log.severe("No se encuentra el empleado por HR_ClockCode ni por Tax_ID: " + hrClockCode);
+                    log.warning("@Error@ No se encuentra el empleado " + hrClockCode);
+                    continue; // Saltar este registro, evita la el marcado como procesado
+                
             }
 
+           
             MBPartner employed = new MBPartner(getCtx(), employedID, get_TrxName());
 
-            // Nuevo día o nuevo empleado
+           
             if (!day.equals(dateFormat2.format(parsedDate)) || !emp.equals(hrClockCode)) {
                 i = 1;
                 MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
