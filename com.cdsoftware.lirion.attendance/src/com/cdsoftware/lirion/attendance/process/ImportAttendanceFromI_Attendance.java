@@ -21,6 +21,7 @@ import com.cdsoftware.lirion.attendance.base.CustomProcess;
 import com.cdsoftware.lirion.attendance.model.MGH_ShiftsLine;
 import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
+import com.cdsoftware.lirion.attendance.model.X_HR_AttendanceDevices;
 import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
 
 /**
@@ -55,18 +56,27 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 
         MHR_Attendance attendance = new MHR_Attendance(getCtx(), 0, get_TrxName());
 
-        List<X_I_Attendance> attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Device_Name=? AND Processed!='Y'", get_TrxName())
+        // Obtener los registros de asistencia según pDevice_Name
+        List<X_I_Attendance> attendanceList;
+        if (pDevice_Name.isEmpty()) {
+            attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Processed!='Y'", get_TrxName())
+                .setClient_ID()
+                .setOrderBy("Device_Name, HR_ClockCode, Date_Stamp ASC")
+                .list();
+        } else {
+            attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Device_Name=? AND Processed!='Y'", get_TrxName())
                 .setClient_ID()
                 .setOrderBy("Device_Name, HR_ClockCode, Date_Stamp ASC")
                 .setParameters(pDevice_Name)
                 .list();
+        }
 
         if (attendanceList.isEmpty()) {
             return "@Error@No hay registros en la tabla I_Attendance";
         } else {
             attendance.saveEx();
         }
-        
+
         SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd-yyyy h:mm a", Locale.getDefault());
         SimpleDateFormat dateFormat2 = new SimpleDateFormat("MM-dd-yyyy", Locale.getDefault());
 
@@ -87,26 +97,46 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
             String hrClockCode = record.getHR_ClockCode().trim();
             String markingDateStr = dateFormat.format(record.getDate_Stamp());
             parsedDate = new Timestamp(record.getDate_Stamp().getTime());
-            
+
             if (j == 0 || startDate.compareTo(parsedDate) > 0)
                 startDate = parsedDate;
-            
+
             // Obtener el empleado por HR_ClockCode
-            int employedID = DB.getSQLValueEx(get_TrxName(), "SELECT C_BPartner_ID FROM C_BPartner WHERE REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')", hrClockCode);
+            int employedID = DB.getSQLValueEx(get_TrxName(), 
+                "SELECT C_BPartner_ID FROM C_BPartner WHERE REPLACE(trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE(trim(?), '-', '')", 
+                hrClockCode);
 
-                   
-
-             if (employedID <= 0) {
-                    log.severe("No se encuentra el empleado por HR_ClockCode ni por Tax_ID: " + hrClockCode);
-                    log.warning("@Error@ No se encuentra el empleado " + hrClockCode);
-                    continue; // Saltar este registro, evita la el marcado como procesado
-                
+            if (employedID <= 0) {
+                log.severe("No se encuentra el empleado por HR_ClockCode ni por Tax_ID: " + hrClockCode);
+                log.warning("@Error@ No se encuentra el empleado " + hrClockCode);
+                continue; // Saltar este registro, evita marcar como procesado
             }
 
-           
+            // Verificar que Device_Name y Device_SN existan en HR_AttendanceDevices
+            String deviceName = record.getDevice_Name();
+            String deviceSN = record.getDevice_SN();
+
+            int deviceID = DB.getSQLValueEx(get_TrxName(),
+                "SELECT HR_AttendanceDevices_ID FROM HR_AttendanceDevices WHERE Name=? AND Device_SN=?",
+                deviceName, deviceSN);
+
+            if (deviceID <= 0) {
+                // Si el dispositivo no existe, crear uno nuevo
+                log.warning("Dispositivo no encontrado. Insertando nuevo dispositivo: " + deviceName + " con SN: " + deviceSN);
+                
+                X_HR_AttendanceDevices newDevice = new X_HR_AttendanceDevices(getCtx(), 0, get_TrxName());
+                newDevice.setName(deviceName);
+                newDevice.setDevice_SN(deviceSN);
+                newDevice.saveEx(); // Guardar el nuevo dispositivo
+                
+                deviceID = newDevice.getHR_AttendanceDevices_ID(); // Obtener el nuevo ID del dispositivo
+                log.info("Nuevo dispositivo creado con ID: " + deviceID);
+            }
+
             MBPartner employed = new MBPartner(getCtx(), employedID, get_TrxName());
 
-           
+            
+
             if (!day.equals(dateFormat2.format(parsedDate)) || !emp.equals(hrClockCode)) {
                 i = 1;
                 MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
@@ -123,7 +153,6 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
                 day = dateFormat2.format(parsedDate);
                 emp = hrClockCode;
                 alID = al.get_ID();
-
             } else {
                 MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
                 if (record.getDate_Stamp() != null) {
@@ -163,8 +192,13 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
             record.set_ValueNoCheck("Processed", true);
             record.saveEx();
 
-            i++; j++;
+            i++;
+            j++;
         }
+
+
+
+        
 
         endDate = parsedDate;
         attendance.setDateFrom(startDate);
