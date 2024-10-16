@@ -17,6 +17,7 @@ import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.DB;
 
+import com.cdsoftware.lirion.attendance.base.CustomProcess;
 import com.cdsoftware.lirion.attendance.model.MGH_ShiftsLine;
 import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
@@ -29,10 +30,10 @@ import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
  * @author Carlo
  */
 @org.adempiere.base.annotation.Process
-public class ImportAttendanceFromI_Attendance extends SvrProcess {
+public class ImportAttendanceFromI_Attendance extends CustomProcess {
 
-   // private int RECORD_ID = 0;
-	private String pDevice_Name = "";
+    private String pDevice_Name = "";
+    
     @Override
     protected void prepare() {
         ProcessInfoParameter[] parameters = getParameter();
@@ -42,7 +43,6 @@ public class ImportAttendanceFromI_Attendance extends SvrProcess {
 			else if (name.equals("Device_Name"))
 				pDevice_Name = para.getParameterAsString();
         }
-       // RECORD_ID = getRecord_ID();
     }
 
     @Override
@@ -53,29 +53,20 @@ public class ImportAttendanceFromI_Attendance extends SvrProcess {
 
     public String writeAttendance() throws Exception {
         StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
-        /*StringBuilder sql = new StringBuilder("DELETE FROM HR_AttendanceLine ")
-                .append("WHERE HR_Attendance_ID=").append(RECORD_ID).append(clientCheck);
-        int no = DB.executeUpdate(sql.toString(), get_TrxName());
-        if (log.isLoggable(Level.FINE)) log.fine("Delete Attendance =" + no);*/
 
-        MHR_Attendance attendance;
-       /* if (RECORD_ID > 0)
-            attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
-        else*/
-            attendance = new MHR_Attendance(getCtx(), 0, get_TrxName());
+        MHR_Attendance attendance = new MHR_Attendance(getCtx(), 0, get_TrxName());
 
         List<X_I_Attendance> attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Device_Name=? AND Processed!='Y'", get_TrxName())
-                //.setOrderBy("HR_ClockCode, Date_Stamp").list();
-        		.setClient_ID()
-        		.setOrderBy("Device_Name,HR_ClockCode, Date_Stamp ASC")
-        		.setParameters(pDevice_Name)
-        		.list();
+                .setClient_ID()
+                .setOrderBy("Device_Name, HR_ClockCode, Date_Stamp ASC")
+                .setParameters(pDevice_Name)
+                .list();
 
         if (attendanceList.isEmpty()) {
             return "@Error@No hay registros en la tabla I_Attendance";
+        } else {
+            attendance.saveEx();
         }
-        else
-        	attendance.saveEx();
         
         SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd-yyyy h:mm a", Locale.getDefault());
         SimpleDateFormat dateFormat2 = new SimpleDateFormat("MM-dd-yyyy", Locale.getDefault());
@@ -92,37 +83,44 @@ public class ImportAttendanceFromI_Attendance extends SvrProcess {
         Timestamp startDate = new Timestamp(System.currentTimeMillis());
         Timestamp endDate = null;
         Timestamp parsedDate = null;
+
         for (X_I_Attendance record : attendanceList) {
             String hrClockCode = record.getHR_ClockCode().trim();
             String markingDateStr = dateFormat.format(record.getDate_Stamp());
             parsedDate = new Timestamp(record.getDate_Stamp().getTime());
-            if(j==0 || startDate.compareTo(parsedDate)>0)
-            	startDate =  parsedDate;
+            
+            if (j == 0 || startDate.compareTo(parsedDate) > 0)
+                startDate = parsedDate;
+            
+            // Obtener el empleado
+            int employedID = DB.getSQLValueEx(get_TrxName(), "SELECT C_BPartner_ID FROM C_BPartner WHERE hr_clockcode = ?", hrClockCode);
+
+            // Si no se encuentra el empleado, registrar un error y continuar con el siguiente registro
+            if (employedID <= 0) {
+                log.severe("No se encuentra el empleado " + hrClockCode);
+                log.warning("@Error@ No se encuentra el empleado " + hrClockCode);
+                continue; // Saltar este registro, no lo marcaremos como procesado
+            }
+
+            MBPartner employed = new MBPartner(getCtx(), employedID, get_TrxName());
+
+            // Nuevo día o nuevo empleado
             if (!day.equals(dateFormat2.format(parsedDate)) || !emp.equals(hrClockCode)) {
                 i = 1;
                 MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
                 al.setHR_Attendance_ID(attendance.get_ID());
+                al.setC_BPartner_ID(employed.getC_BPartner_ID());
+                al.setWeekDay(getWeekDayValue(parsedDate));
+                al.setAttendanceDate(parsedDate);
 
-                int employedID = DB.getSQLValueEx(get_TrxName(), "SELECT C_BPartner_ID FROM C_BPartner WHERE hr_clockcode = ?", hrClockCode);
+                time1 = parsedDate;
+                al.setTime1(time1);
 
-                if (employedID <= 0) {
-                    log.severe("No se encuentra el empleado " + hrClockCode);
-                    log.warning("@Error@ No se encuentra el empleado " + hrClockCode);
-                } else {
-                    MBPartner employed = new MBPartner(getCtx(), employedID, get_TrxName());
-                    al.setC_BPartner_ID(employed.getC_BPartner_ID());
-                    al.setWeekDay(getWeekDayValue(parsedDate));
-                    al.setAttendanceDate(parsedDate);
-
-                    time1 = parsedDate;
-                    al.setTime1(time1);
-
-                    al.saveEx();
-                    this.statusUpdate("Procesando: " + employed.getValue() + " " + employed.getName() + " " + al.getAttendanceDate());
-                    day = dateFormat2.format(parsedDate);
-                    emp = hrClockCode;
-                    alID = al.get_ID();
-                }
+                al.saveEx();
+                this.statusUpdate("Procesando: " + employed.getValue() + " " + employed.getName() + " " + al.getAttendanceDate());
+                day = dateFormat2.format(parsedDate);
+                emp = hrClockCode;
+                alID = al.get_ID();
 
             } else {
                 MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
@@ -158,10 +156,14 @@ public class ImportAttendanceFromI_Attendance extends SvrProcess {
                 }
                 al.saveEx();
             }
+
+            // Marcar como procesado solo si el empleado fue encontrado
             record.set_ValueNoCheck("Processed", true);
             record.saveEx();
-            i++;j++;
+
+            i++; j++;
         }
+
         endDate = parsedDate;
         attendance.setDateFrom(startDate);
         attendance.setDateTo(endDate);
