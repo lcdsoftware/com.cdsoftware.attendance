@@ -12,6 +12,7 @@ import org.compiere.util.Env;
 
 import com.cdsoftware.lirion.attendance.base.CustomProcess;
 import com.cdsoftware.lirion.attendance.model.MHR_C_BPartnerShifts;
+import com.cdsoftware.lirion.attendance.model.X_GH_Shifts_RG_Line;
 
 @org.adempiere.base.annotation.Process
 public class Create_C_BPartner_Shift extends CustomProcess {
@@ -78,15 +79,15 @@ public class Create_C_BPartner_Shift extends CustomProcess {
     }
 
     private int[] getBPartnerIDsFromGHShiftsRG() {
-        // Ejecutar la consulta sin setDistinct
-        List<MHR_C_BPartnerShifts> shiftsRGList = new Query(Env.getCtx(), "GH_Shifts_RG_Line", "GH_Shifts_RG_ID = ?", get_TrxName())
+        // Usar el modelo correcto X_GH_Shifts_RG_Line
+        List<X_GH_Shifts_RG_Line> shiftsRGList = new Query(Env.getCtx(), X_GH_Shifts_RG_Line.Table_Name, "GH_Shifts_RG_ID = ?", get_TrxName())
                 .setParameters(p_GH_Shifts_RG_ID)
                 .list();
 
         // Utilizar un conjunto (Set) para almacenar los IDs de los trabajadores y eliminar duplicados automáticamente
         Set<Integer> uniqueBPartnerIDs = new HashSet<>();
         
-        for (MHR_C_BPartnerShifts shift : shiftsRGList) {
+        for (X_GH_Shifts_RG_Line shift : shiftsRGList) {
             uniqueBPartnerIDs.add(shift.getC_BPartner_ID()); // Añadir solo IDs únicos
         }
 
