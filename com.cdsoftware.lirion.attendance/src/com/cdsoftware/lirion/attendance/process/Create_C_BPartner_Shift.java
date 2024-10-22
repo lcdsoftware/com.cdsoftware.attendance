@@ -1,14 +1,13 @@
 package com.cdsoftware.lirion.attendance.process;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.compiere.model.MBPartner;
+import org.compiere.model.Query;
 import org.compiere.process.ProcessInfoParameter;
-import org.compiere.util.DB;
 import org.compiere.util.Env;
 
 import com.cdsoftware.lirion.attendance.base.CustomProcess;
@@ -34,37 +33,36 @@ public class Create_C_BPartner_Shift extends CustomProcess {
 
             if (name.equals("DateFrom")) {
                 p_DateFrom = para.getParameterAsTimestamp();
-                System.out.println("DateFrom: " + p_DateFrom);  // Mensaje de depuración
+                System.out.println("DateFrom: " + p_DateFrom);
             } else if (name.equals("DateTo")) {
                 p_DateTo = para.getParameterAsTimestamp();
-                System.out.println("DateTo: " + p_DateTo);  // Mensaje de depuración
+                System.out.println("DateTo: " + p_DateTo);
             } else if (name.equals("C_BPartner_ID")) {
-                // Almacenamos como una lista para manejar múltiples IDs
                 p_C_BPartner_IDs = new int[] {para.getParameterAsInt()};
-                System.out.println("C_BPartner_ID: " + p_C_BPartner_IDs[0]);  // Mensaje de depuración
+                System.out.println("C_BPartner_ID: " + p_C_BPartner_IDs[0]);
             } else if (name.equals("GH_Shifts_ID")) {
                 p_GH_Shifts_ID = para.getParameterAsInt();
-                System.out.println("GH_Shifts_ID: " + p_GH_Shifts_ID);  // Mensaje de depuración
+                System.out.println("GH_Shifts_ID: " + p_GH_Shifts_ID);
             } else if (name.equals("HR_Department_ID")) {
                 p_HR_Department_ID = para.getParameterAsInt();
-                System.out.println("HR_Department_ID: " + p_HR_Department_ID);  // Mensaje de depuración
+                System.out.println("HR_Department_ID: " + p_HR_Department_ID);
             } else if (name.equals("GH_Shifts_RG_ID")) {
                 p_GH_Shifts_RG_ID = para.getParameterAsInt();
-                System.out.println("GH_Shifts_RG_ID: " + p_GH_Shifts_RG_ID);  // Mensaje de depuración
+                System.out.println("GH_Shifts_RG_ID: " + p_GH_Shifts_RG_ID);
             }
         }
 
-        // Si se proporciona GH_Shifts_RG_ID, obtener la lista de C_BPartner_ID desde GH_Shifts_RG
+        // Obtener los IDs de los trabajadores desde GH_Shifts_RG usando el modelo
         if (p_GH_Shifts_RG_ID > 0) {
             p_C_BPartner_IDs = getBPartnerIDsFromGHShiftsRG();
-            System.out.println("Obtenidos " + p_C_BPartner_IDs.length + " C_BPartner_IDs desde GH_Shifts_RG.");  // Mensaje de depuración
+            System.out.println("Obtenidos " + p_C_BPartner_IDs.length + " C_BPartner_IDs desde GH_Shifts_RG.");
         }
     }
 
     @Override
     protected String doIt() throws Exception {
         if (p_C_BPartner_IDs == null || p_C_BPartner_IDs.length == 0) {
-            System.out.println("No se proporcionó un trabajador válido.");  // Mensaje de depuración
+            System.out.println("No se proporcionó un trabajador válido.");
             return "No se proporcionó trabajador válido.";
         }
 
@@ -73,35 +71,27 @@ public class Create_C_BPartner_Shift extends CustomProcess {
             return "Proceso completado exitosamente.";
         } catch (Exception e) {
             String errorMessage = "Error al ejecutar el proceso: " + e.getMessage();
-            System.out.println(errorMessage);  // Mensaje de depuración en caso de error
+            System.out.println(errorMessage);
             this.statusUpdate(errorMessage);
             return errorMessage;
         }
     }
 
     private int[] getBPartnerIDsFromGHShiftsRG() {
-        List<Integer> bpartnerIDList = new ArrayList<>();
-        String sql = "SELECT DISTINCT C_BPartner_ID FROM GH_Shifts_RG_Line WHERE GH_Shifts_RG_ID = ?";
+        // Ejecutar la consulta sin setDistinct
+        List<MHR_C_BPartnerShifts> shiftsRGList = new Query(Env.getCtx(), "GH_Shifts_RG_Line", "GH_Shifts_RG_ID = ?", get_TrxName())
+                .setParameters(p_GH_Shifts_RG_ID)
+                .list();
 
-        try (PreparedStatement pstmt = DB.prepareStatement(sql, get_TrxName())) {
-            pstmt.setInt(1, p_GH_Shifts_RG_ID);
-            System.out.println("Ejecutando consulta para obtener C_BPartner_IDs desde GH_Shifts_RG_Line.");  // Mensaje de depuración
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    int cBPartnerID = rs.getInt("C_BPartner_ID");
-                    System.out.println("Encontrado C_BPartner_ID: " + cBPartnerID);  // Mensaje de depuración
-                    bpartnerIDList.add(cBPartnerID);
-                }
-            }
-        } catch (SQLException e) {
-            String error = "Error al obtener trabajador desde GH_Shifts_RG. SQL: " + sql +
-                           ", GH_Shifts_RG_ID: " + p_GH_Shifts_RG_ID;
-            System.out.println(error);  // Mensaje de depuración
-            throw new RuntimeException(error, e);
+        // Utilizar un conjunto (Set) para almacenar los IDs de los trabajadores y eliminar duplicados automáticamente
+        Set<Integer> uniqueBPartnerIDs = new HashSet<>();
+        
+        for (MHR_C_BPartnerShifts shift : shiftsRGList) {
+            uniqueBPartnerIDs.add(shift.getC_BPartner_ID()); // Añadir solo IDs únicos
         }
 
-        // Convertir la lista a un array de enteros
-        return bpartnerIDList.stream().mapToInt(i -> i).toArray();
+        // Convertir el conjunto (Set) a un array de enteros
+        return uniqueBPartnerIDs.stream().mapToInt(Integer::intValue).toArray();
     }
 
     private void createBPartnerShiftRecords() {
@@ -114,7 +104,7 @@ public class Create_C_BPartner_Shift extends CustomProcess {
 
             // Verificar si el trabajador ya tiene un turno en el mismo rango de fechas
             if (isBPartnerAssignedInDateRange(cBPartnerID, p_DateFrom, p_DateTo, p_GH_Shifts_ID)) {
-                System.out.println("El trabajador '" + workerName + "' ya tiene un turno en este rango de fechas.");  // Mensaje de depuración
+                System.out.println("El trabajador '" + workerName + "' ya tiene un turno en este rango de fechas.");
                 addLog(0, p_DateFrom, null, "El trabajador '" + workerName + "' ya tiene un turno en este rango de fechas.");
                 hasError = true;
             } else {
@@ -124,45 +114,45 @@ public class Create_C_BPartner_Shift extends CustomProcess {
                 bpartnerShifts.setDateTo(p_DateTo);
                 bpartnerShifts.setGH_Shifts_ID(p_GH_Shifts_ID);
                 bpartnerShifts.saveEx();
-                System.out.println("Registro creado para trabajador: " + workerName);  // Mensaje de depuración
+                System.out.println("Registro creado para trabajador: " + workerName);
 
                 String statusMessage = "Procesando registro " + (i + 1) + " de " + totalRecords;
-                System.out.println(statusMessage);  // Mensaje de depuración
+                System.out.println(statusMessage);
                 this.statusUpdate(statusMessage);
             }
         }
 
         if (!hasError) {
             this.statusUpdate("Proceso completado exitosamente. Todos los registros fueron procesados.");
-            System.out.println("Proceso completado exitosamente.");  // Mensaje de depuración
+            System.out.println("Proceso completado exitosamente.");
         }
     }
 
     private String getBPartnerName(int cBPartnerID) {
-        String sql = "SELECT Name FROM C_BPartner WHERE C_BPartner_ID = ?";
-    
-        try (PreparedStatement pstmt = DB.prepareStatement(sql, get_TrxName())) {
-            pstmt.setInt(1, cBPartnerID);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString("Name");
-                }
-            }
-        } catch (SQLException e) {
-            System.out.println("Error obteniendo nombre del trabajador para C_BPartner_ID: " + cBPartnerID);  // Mensaje de depuración
-            throw new RuntimeException("Error obteniendo nombre del trabajador para C_BPartner_ID: " + cBPartnerID, e);
+        // Utilizar el modelo MBPartner para obtener el nombre del trabajador
+        MBPartner partner = new MBPartner(Env.getCtx(), cBPartnerID, get_TrxName());
+        if (partner != null) {
+            return partner.getName();
         }
-
         return "Unknown Worker";
     }
 
     private boolean isBPartnerAssignedInDateRange(int cBPartnerID, Timestamp dateFrom, Timestamp dateTo, int ghShiftsID) {
-        String sql = "SELECT COUNT(*) FROM HR_C_BPartnerShifts WHERE C_BPartner_ID = ? AND DateFrom <= ? AND DateTo >= ?";
+        // Verificar utilizando el modelo MHR_C_BPartnerShifts si existe un turno asignado
+        String whereClause = "C_BPartner_ID = ? AND DateFrom <= ? AND DateTo >= ?";
+        List<MHR_C_BPartnerShifts> shiftsList;
+
         if (ghShiftsID > 0) {
-            sql += " AND GH_Shifts_ID = ?";
-            return DB.getSQLValueEx(get_TrxName(), sql, cBPartnerID, dateFrom, dateTo, ghShiftsID) > 0;
+            whereClause += " AND GH_Shifts_ID = ?";
+            shiftsList = new Query(Env.getCtx(), MHR_C_BPartnerShifts.Table_Name, whereClause, get_TrxName())
+                    .setParameters(cBPartnerID, dateFrom, dateTo, ghShiftsID)
+                    .list();
         } else {
-            return DB.getSQLValueEx(get_TrxName(), sql, cBPartnerID, dateFrom, dateTo) > 0;
+            shiftsList = new Query(Env.getCtx(), MHR_C_BPartnerShifts.Table_Name, whereClause, get_TrxName())
+                    .setParameters(cBPartnerID, dateFrom, dateTo)
+                    .list();
         }
+
+        return !shiftsList.isEmpty();  // Si la lista no está vacía, ya tiene un turno asignado
     }
 }
