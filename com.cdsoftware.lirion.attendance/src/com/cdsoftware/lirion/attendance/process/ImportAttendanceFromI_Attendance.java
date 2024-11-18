@@ -80,6 +80,7 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 
 		SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd-yyyy h:mm a", Locale.getDefault());
 		SimpleDateFormat dateFormat2 = new SimpleDateFormat("MM-dd-yyyy", Locale.getDefault());
+		SimpleDateFormat dateFormat3 = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
 		String day = "";
 		String emp = "";
@@ -153,11 +154,11 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 
 			MBPartner employed = new MBPartner(getCtx(), employedID, get_TrxName());
 
-
+			
 
 			if (!day.equals(dateFormat2.format(parsedDate)) || !emp.equals(hrClockCode)) {
 				MHR_AttendanceLine existingattendance=new Query(getCtx(), MHR_AttendanceLine.Table_Name, "AttendanceDate=? AND C_BPartner_ID=?", get_TrxName())
-						.setParameters(parsedDate,employed.getC_BPartner_ID())
+						.setParameters(dateFormat3.format(parsedDate),employed.getC_BPartner_ID())
 						.first();
 				if(existingattendance==null) {
 					i = 1;
