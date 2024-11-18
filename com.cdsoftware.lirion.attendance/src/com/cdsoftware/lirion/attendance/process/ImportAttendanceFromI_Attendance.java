@@ -157,8 +157,8 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 			
 
 			if (!day.equals(dateFormat2.format(parsedDate)) || !emp.equals(hrClockCode)) {
-				MHR_AttendanceLine existingattendance=new Query(getCtx(), MHR_AttendanceLine.Table_Name, "AttendanceDate=? AND C_BPartner_ID=?", get_TrxName())
-						.setParameters(dateFormat3.format(parsedDate),employed.getC_BPartner_ID())
+				MHR_AttendanceLine existingattendance=new Query(getCtx(), MHR_AttendanceLine.Table_Name, "AttendanceDate='"+dateFormat3.format(parsedDate)+"' AND C_BPartner_ID=?", get_TrxName())
+						.setParameters(employed.getC_BPartner_ID())
 						.first();
 				if(existingattendance==null) {
 					i = 1;
