@@ -124,10 +124,11 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 
 			if (employedID <= 0) {
 				log.severe("No se encuentra el empleado por HR_ClockCode ni por Tax_ID: " + hrClockCode);
-				log.warning("@Error@ No se encuentra el empleado " + hrClockCode +", Se procederá a agrgarlo");
+				log.warning("@Error@ No se encuentra el empleado " + hrClockCode +", Se procederá a agregarlo");
 				//continue; // Saltar este registro, evita marcar como procesado
 				MBPartner newBpartner = MBPartner.getTemplate(getCtx(), this.getAD_Client_ID());
                 newBpartner.setName(record.getFull_Name()); 
+                newBpartner.setValue(record.getHR_ClockCode());
                 newBpartner.set_ValueOfColumn("FirstName1", record.getFull_Name());
                 newBpartner.set_ValueOfColumn("LastName1", " ");
                 newBpartner.setTaxID(record.getHR_ClockCode()); 
