@@ -128,6 +128,8 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 				//continue; // Saltar este registro, evita marcar como procesado
 				MBPartner newBpartner = MBPartner.getTemplate(getCtx(), this.getAD_Client_ID());
                 newBpartner.setName(record.getFull_Name()); 
+                newBpartner.set_ValueOfColumn("FirstName1", record.getFull_Name());
+                newBpartner.set_ValueOfColumn("LastName1", " ");
                 newBpartner.setTaxID(record.getHR_ClockCode()); 
                 newBpartner.setIsEmployee(true);
                 newBpartner.set_ValueOfColumn("HR_ClockCode", record.getHR_ClockCode());
