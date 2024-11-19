@@ -134,7 +134,10 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
                 newBpartner.setIsEmployee(true);
                 newBpartner.set_ValueOfColumn("HR_ClockCode", record.getHR_ClockCode());
                 newBpartner.saveEx();
-				
+                
+                employedID=newBpartner.get_ID();
+                record.setC_BPartner_ID(employedID);
+                record.saveEx();
 			}
 
 			// Verificar que Device_Name y Device_SN existan en HR_AttendanceDevices
@@ -160,7 +163,7 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 				log.info("Nuevo dispositivo creado con ID: " + newDevice.get_ID());
 				
 			}
-
+			
 			MBPartner employed = new MBPartner(getCtx(), employedID, get_TrxName());
 
 			
