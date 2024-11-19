@@ -243,9 +243,14 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 
 
 		endDate = parsedDate;
-		attendance.setDateFrom(startDate);
-		attendance.setDateTo(endDate);
-		attendance.setName(startDate.toString().concat(" to ").concat(endDate.toString()));
+		//attendance.setDateFrom(startDate);
+		//attendance.setDateTo(endDate);
+		//attendance.setName(startDate.toString().concat(" to ").concat(endDate.toString()));
+		String startDateStr = (startDate != null) ? startDate.toString() : "N/A";
+		String endDateStr = (endDate != null) ? endDate.toString() : "N/A";
+
+		attendance.setName(startDateStr.concat(" to ").concat(endDateStr));
+
 		attendance.saveEx();
 		return null;
 	}
