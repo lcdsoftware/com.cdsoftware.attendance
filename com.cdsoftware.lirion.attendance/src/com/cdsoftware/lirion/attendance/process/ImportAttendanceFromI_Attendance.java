@@ -139,6 +139,7 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
                 employedID=newBpartner.get_ID();
                 record.setC_BPartner_ID(employedID);
                 record.saveEx();
+                commitEx();
 			}
 
 			// Verificar que Device_Name y Device_SN existan en HR_AttendanceDevices
