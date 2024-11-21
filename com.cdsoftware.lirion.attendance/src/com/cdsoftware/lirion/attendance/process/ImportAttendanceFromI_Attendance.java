@@ -60,15 +60,16 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 		// Obtener los registros de asistencia según pDevice_Name
 		List<X_I_Attendance> attendanceList;
 		if (pDevice_Name.isEmpty()) {
-			attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Processed!='Y'", get_TrxName())
+			attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Processed!='Y'", get_TrxName())  
 					.setClient_ID()
-					.setOrderBy("Device_Name, HR_ClockCode, Date_Stamp ASC")
+					//.setOrderBy("Device_Name, HR_ClockCode, Date_Stamp ASC") //condicion para agrupar por dispositivo, esto hará que se cree una linea nueva por dispositivo
+					.setOrderBy("HR_ClockCode, Date_Stamp ASC")
 					.list();
 		} else {
 			attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Device_Name=? AND Processed!='Y'", get_TrxName())
 					.setClient_ID()
 					.setOrderBy("Device_Name, HR_ClockCode, Date_Stamp ASC")
-					.setParameters(pDevice_Name)
+					.setParameters(pDevice_Name) 
 					.list();
 		}
 
