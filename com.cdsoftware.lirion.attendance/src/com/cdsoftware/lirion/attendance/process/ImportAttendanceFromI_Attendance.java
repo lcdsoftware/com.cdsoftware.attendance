@@ -68,7 +68,8 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 		} else {
 			attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Device_Name=? AND Processed!='Y'", get_TrxName())
 					.setClient_ID()
-					.setOrderBy("Device_Name, HR_ClockCode, Date_Stamp ASC")
+					//.setOrderBy("Device_Name, HR_ClockCode, Date_Stamp ASC")
+					.setOrderBy("HR_ClockCode, Date_Stamp ASC")
 					.setParameters(pDevice_Name) 
 					.list();
 		}
