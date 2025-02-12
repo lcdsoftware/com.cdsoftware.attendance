@@ -211,8 +211,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					al.setHR_Attendance_ID(attendance.get_ID());
 					StringBuilder whereclause = new StringBuilder();
 					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
+					//Realizar busqueda solo en terceros activos y que tengan el check de colaborador
+					whereclause.append(" AND IsEmployee='Y' AND Isactive='Y'");
 					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, 							
-							whereclause.toString(), get_TrxName()).setParameters(line.getValue()).first();
+							whereclause.toString(), get_TrxName()).setParameters(line.getValue())
+							.setClient_ID()
+							.first();
 					if(employed==null) {
 						if(lastnotfoundbp.compareTo(line.getValue())!=0) {		
 							lastnotfoundbp=line.getValue();
@@ -433,9 +437,13 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
 					al.setHR_Attendance_ID(attendance.get_ID());
 					StringBuilder whereclause = new StringBuilder();
-					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')=?");
+					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
+					//Realizar busqueda solo en terceros activos y que tengan el check de colaborador
+					whereclause.append(" AND IsEmployee='Y' AND Isactive='Y'");
 					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, 							
-							whereclause.toString(), get_TrxName()).setParameters(line.getValue()).first();
+							whereclause.toString(), get_TrxName()).setParameters(line.getValue())
+							.setClient_ID()
+							.first();
 					if(employed==null) {
 						if(lastnotfoundbp.compareTo(line.getValue())!=0) {		
 							lastnotfoundbp=line.getValue();
