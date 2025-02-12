@@ -24,7 +24,7 @@ import org.compiere.model.*;
 
 /** Generated Model for I_Attendance
  *  @author iDempiere (generated) 
- *  @version Release 7.1 - $Id$ */
+ *  @version Release 10 - $Id$ */
 @org.adempiere.base.Model(table="I_Attendance")
 public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent 
 {
@@ -32,7 +32,7 @@ public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20200122L;
+	private static final long serialVersionUID = 20241009L;
 
     /** Standard Constructor */
     public X_I_Attendance (Properties ctx, int I_Attendance_ID, String trxName)
@@ -41,7 +41,16 @@ public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent
       /** if (I_Attendance_ID == 0)
         {
 			setI_Attendance_ID (0);
-			setName (null);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_I_Attendance (Properties ctx, int I_Attendance_ID, String trxName, String ... virtualColumns)
+    {
+      super (ctx, I_Attendance_ID, trxName, virtualColumns);
+      /** if (I_Attendance_ID == 0)
+        {
+			setI_Attendance_ID (0);
         } */
     }
 
@@ -68,97 +77,233 @@ public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent
 
     public String toString()
     {
-      StringBuffer sb = new StringBuffer ("X_I_Attendance[")
+      StringBuilder sb = new StringBuilder ("X_I_Attendance[")
         .append(get_ID()).append("]");
       return sb.toString();
     }
 
-	/** Set Attendance Date.
-		@param AttendanceDate Attendance Date	  */
-	public void setAttendanceDate (Timestamp AttendanceDate)
+	/** Set Attendance Status.
+		@param Attendance_Status Attendance Status
+	*/
+	public void setAttendance_Status (String Attendance_Status)
 	{
-		set_Value (COLUMNNAME_AttendanceDate, AttendanceDate);
+		set_Value (COLUMNNAME_Attendance_Status, Attendance_Status);
 	}
 
-	/** Get Attendance Date.
-		@return Attendance Date	  */
-	public Timestamp getAttendanceDate () 
+	/** Get Attendance Status.
+		@return Attendance Status	  */
+	public String getAttendance_Status()
 	{
-		return (Timestamp)get_Value(COLUMNNAME_AttendanceDate);
+		return (String)get_Value(COLUMNNAME_Attendance_Status);
 	}
 
-	/** Set Business Partner Key.
-		@param BPartnerValue 
-		Key of the Business Partner
+	/** Set Authentication Method.
+		@param Auth_Method Authentication Method
+	*/
+	public void setAuth_Method (String Auth_Method)
+	{
+		set_Value (COLUMNNAME_Auth_Method, Auth_Method);
+	}
+
+	/** Get Authentication Method.
+		@return Authentication Method	  */
+	public String getAuth_Method()
+	{
+		return (String)get_Value(COLUMNNAME_Auth_Method);
+	}
+
+	/** Set Authentication Result.
+		@param Auth_Result Authentication Result
+	*/
+	public void setAuth_Result (String Auth_Result)
+	{
+		set_Value (COLUMNNAME_Auth_Result, Auth_Result);
+	}
+
+	/** Get Authentication Result.
+		@return Authentication Result	  */
+	public String getAuth_Result()
+	{
+		return (String)get_Value(COLUMNNAME_Auth_Result);
+	}
+
+	/** Set Card Reader.
+		@param Card_Reader Card Reader
+	*/
+	public void setCard_Reader (String Card_Reader)
+	{
+		set_Value (COLUMNNAME_Card_Reader, Card_Reader);
+	}
+
+	/** Get Card Reader.
+		@return Card Reader	  */
+	public String getCard_Reader()
+	{
+		return (String)get_Value(COLUMNNAME_Card_Reader);
+	}
+
+	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException
+	{
+		return (org.compiere.model.I_C_BPartner)MTable.get(getCtx(), org.compiere.model.I_C_BPartner.Table_ID)
+			.getPO(getC_BPartner_ID(), get_TrxName());
+	}
+
+	/** Set Business Partner.
+		@param C_BPartner_ID Identifies a Business Partner
+	*/
+	public void setC_BPartner_ID (int C_BPartner_ID)
+	{
+		if (C_BPartner_ID < 1)
+			set_ValueNoCheck (COLUMNNAME_C_BPartner_ID, null);
+		else
+			set_ValueNoCheck (COLUMNNAME_C_BPartner_ID, Integer.valueOf(C_BPartner_ID));
+	}
+
+	/** Get Business Partner.
+		@return Identifies a Business Partner
 	  */
-	public void setBPartnerValue (String BPartnerValue)
+	public int getC_BPartner_ID()
 	{
-		set_Value (COLUMNNAME_BPartnerValue, BPartnerValue);
-	}
-
-	/** Get Business Partner Key.
-		@return Key of the Business Partner
-	  */
-	public String getBPartnerValue () 
-	{
-		return (String)get_Value(COLUMNNAME_BPartnerValue);
-	}
-
-	/** Set Description.
-		@param Description 
-		Optional short description of the record
-	  */
-	public void setDescription (String Description)
-	{
-		set_Value (COLUMNNAME_Description, Description);
-	}
-
-	/** Get Description.
-		@return Optional short description of the record
-	  */
-	public String getDescription () 
-	{
-		return (String)get_Value(COLUMNNAME_Description);
-	}
-
-	public I_HR_Attendance getHR_Attendance() throws RuntimeException
-    {
-		return (I_HR_Attendance)MTable.get(getCtx(), I_HR_Attendance.Table_Name)
-			.getPO(getHR_Attendance_ID(), get_TrxName());	}
-
-	/** Set Attendance.
-		@param HR_Attendance_ID Attendance	  */
-	public void setHR_Attendance_ID (int HR_Attendance_ID)
-	{
-		if (HR_Attendance_ID < 1) 
-			set_ValueNoCheck (COLUMNNAME_HR_Attendance_ID, null);
-		else 
-			set_ValueNoCheck (COLUMNNAME_HR_Attendance_ID, Integer.valueOf(HR_Attendance_ID));
-	}
-
-	/** Get Attendance.
-		@return Attendance	  */
-	public int getHR_Attendance_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_HR_Attendance_ID);
+		Integer ii = (Integer)get_Value(COLUMNNAME_C_BPartner_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
 	}
 
+	/** Set Date Stamp.
+		@param Date_Stamp Date Stamp
+	*/
+	public void setDate_Stamp (Timestamp Date_Stamp)
+	{
+		set_Value (COLUMNNAME_Date_Stamp, Date_Stamp);
+	}
+
+	/** Get Date Stamp.
+		@return Date Stamp	  */
+	public Timestamp getDate_Stamp()
+	{
+		return (Timestamp)get_Value(COLUMNNAME_Date_Stamp);
+	}
+
+	/** Set Department.
+		@param Department Department
+	*/
+	public void setDepartment (String Department)
+	{
+		set_Value (COLUMNNAME_Department, Department);
+	}
+
+	/** Get Department.
+		@return Department	  */
+	public String getDepartment()
+	{
+		return (String)get_Value(COLUMNNAME_Department);
+	}
+
+	/** Set Device Name.
+		@param Device_Name Device Name
+	*/
+	public void setDevice_Name (String Device_Name)
+	{
+		set_Value (COLUMNNAME_Device_Name, Device_Name);
+	}
+
+	/** Get Device Name.
+		@return Device Name	  */
+	public String getDevice_Name()
+	{
+		return (String)get_Value(COLUMNNAME_Device_Name);
+	}
+
+	/** Set Device Serial Number.
+		@param Device_SN Device Serial Number
+	*/
+	public void setDevice_SN (String Device_SN)
+	{
+		set_Value (COLUMNNAME_Device_SN, Device_SN);
+	}
+
+	/** Get Device Serial Number.
+		@return Device Serial Number	  */
+	public String getDevice_SN()
+	{
+		return (String)get_Value(COLUMNNAME_Device_SN);
+	}
+
+	/** Set Direction.
+		@param Direction Direction
+	*/
+	public void setDirection (String Direction)
+	{
+		set_Value (COLUMNNAME_Direction, Direction);
+	}
+
+	/** Get Direction.
+		@return Direction	  */
+	public String getDirection()
+	{
+		return (String)get_Value(COLUMNNAME_Direction);
+	}
+
+	/** Set Face Mask.
+		@param Face_Mask Face Mask
+	*/
+	public void setFace_Mask (String Face_Mask)
+	{
+		set_Value (COLUMNNAME_Face_Mask, Face_Mask);
+	}
+
+	/** Get Face Mask.
+		@return Face Mask	  */
+	public String getFace_Mask()
+	{
+		return (String)get_Value(COLUMNNAME_Face_Mask);
+	}
+
+	/** Set Full Name.
+		@param Full_Name Full Name
+	*/
+	public void setFull_Name (String Full_Name)
+	{
+		set_Value (COLUMNNAME_Full_Name, Full_Name);
+	}
+
+	/** Get Full Name.
+		@return Full Name	  */
+	public String getFull_Name()
+	{
+		return (String)get_Value(COLUMNNAME_Full_Name);
+	}
+
+	/** Set Clock Code.
+		@param HR_ClockCode Clock Code
+	*/
+	public void setHR_ClockCode (String HR_ClockCode)
+	{
+		set_Value (COLUMNNAME_HR_ClockCode, HR_ClockCode);
+	}
+
+	/** Get Clock Code.
+		@return Clock Code	  */
+	public String getHR_ClockCode()
+	{
+		return (String)get_Value(COLUMNNAME_HR_ClockCode);
+	}
+
 	/** Set Import Attendance.
-		@param I_Attendance_ID Import Attendance	  */
+		@param I_Attendance_ID Import Attendance
+	*/
 	public void setI_Attendance_ID (int I_Attendance_ID)
 	{
-		if (I_Attendance_ID < 1) 
+		if (I_Attendance_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_I_Attendance_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_I_Attendance_ID, Integer.valueOf(I_Attendance_ID));
 	}
 
 	/** Get Import Attendance.
 		@return Import Attendance	  */
-	public int getI_Attendance_ID () 
+	public int getI_Attendance_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_I_Attendance_ID);
 		if (ii == null)
@@ -166,34 +311,123 @@ public class X_I_Attendance extends PO implements I_I_Attendance, I_Persistent
 		return ii.intValue();
 	}
 
-	/** Set I_Attendance_UU.
-		@param I_Attendance_UU I_Attendance_UU	  */
+	/** Set I_attendance_UU.
+		@param I_Attendance_UU I_attendance_UU
+	*/
 	public void setI_Attendance_UU (String I_Attendance_UU)
 	{
-		set_Value (COLUMNNAME_I_Attendance_UU, I_Attendance_UU);
+		set_ValueNoCheck (COLUMNNAME_I_Attendance_UU, I_Attendance_UU);
 	}
 
-	/** Get I_Attendance_UU.
-		@return I_Attendance_UU	  */
-	public String getI_Attendance_UU () 
+	/** Get I_attendance_UU.
+		@return I_attendance_UU	  */
+	public String getI_Attendance_UU()
 	{
 		return (String)get_Value(COLUMNNAME_I_Attendance_UU);
 	}
 
-	/** Set Name.
-		@param Name 
-		Alphanumeric identifier of the entity
-	  */
-	public void setName (String Name)
+	/** Set ID Card.
+		@param ID_Card ID Card
+	*/
+	public void setID_Card (String ID_Card)
 	{
-		set_Value (COLUMNNAME_Name, Name);
+		set_Value (COLUMNNAME_ID_Card, ID_Card);
 	}
 
-	/** Get Name.
-		@return Alphanumeric identifier of the entity
-	  */
-	public String getName () 
+	/** Get ID Card.
+		@return ID Card	  */
+	public String getID_Card()
 	{
-		return (String)get_Value(COLUMNNAME_Name);
+		return (String)get_Value(COLUMNNAME_ID_Card);
+	}
+
+	/** Set Processed.
+		@param Processed The document has been processed
+	*/
+	public void setProcessed (boolean Processed)
+	{
+		set_Value (COLUMNNAME_Processed, Boolean.valueOf(Processed));
+	}
+
+	/** Get Processed.
+		@return The document has been processed
+	  */
+	public boolean isProcessed()
+	{
+		Object oo = get_Value(COLUMNNAME_Processed);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Process Now.
+		@param Processing Process Now
+	*/
+	public void setProcessing (boolean Processing)
+	{
+		set_Value (COLUMNNAME_Processing, Boolean.valueOf(Processing));
+	}
+
+	/** Get Process Now.
+		@return Process Now	  */
+	public boolean isProcessing()
+	{
+		Object oo = get_Value(COLUMNNAME_Processing);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Skin Temperature.
+		@param Skin_Temperature Skin Temperature
+	*/
+	public void setSkin_Temperature (String Skin_Temperature)
+	{
+		set_Value (COLUMNNAME_Skin_Temperature, Skin_Temperature);
+	}
+
+	/** Get Skin Temperature.
+		@return Skin Temperature	  */
+	public String getSkin_Temperature()
+	{
+		return (String)get_Value(COLUMNNAME_Skin_Temperature);
+	}
+
+	/** Set Temperature.
+		@param Temperature Temperature
+	*/
+	public void setTemperature (String Temperature)
+	{
+		set_Value (COLUMNNAME_Temperature, Temperature);
+	}
+
+	/** Get Temperature.
+		@return Temperature	  */
+	public String getTemperature()
+	{
+		return (String)get_Value(COLUMNNAME_Temperature);
+	}
+
+	/** Set Time Stamp.
+		@param Time_Stamp Time Stamp
+	*/
+	public void setTime_Stamp (Timestamp Time_Stamp)
+	{
+		set_Value (COLUMNNAME_Time_Stamp, Time_Stamp);
+	}
+
+	/** Get Time Stamp.
+		@return Time Stamp	  */
+	public Timestamp getTime_Stamp()
+	{
+		return (Timestamp)get_Value(COLUMNNAME_Time_Stamp);
 	}
 }

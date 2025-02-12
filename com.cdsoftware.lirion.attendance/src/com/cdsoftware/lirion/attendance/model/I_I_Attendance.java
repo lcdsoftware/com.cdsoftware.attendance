@@ -23,7 +23,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for I_Attendance
  *  @author iDempiere (generated) 
- *  @version Release 7.1
+ *  @version Release 10
  */
 @SuppressWarnings("all")
 public interface I_I_Attendance 
@@ -32,7 +32,7 @@ public interface I_I_Attendance
     /** TableName=I_Attendance */
     public static final String Table_Name = "I_Attendance";
 
-    /** AD_Table_ID=1000096 */
+    /** AD_Table_ID=1000036 */
     public static final int Table_ID = MTable.getTable_ID(Table_Name);
 
     KeyNamePair Model = new KeyNamePair(Table_ID, Table_Name);
@@ -46,8 +46,8 @@ public interface I_I_Attendance
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -55,36 +55,65 @@ public interface I_I_Attendance
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
-    /** Column name AttendanceDate */
-    public static final String COLUMNNAME_AttendanceDate = "AttendanceDate";
+    /** Column name Attendance_Status */
+    public static final String COLUMNNAME_Attendance_Status = "Attendance_Status";
 
-	/** Set Attendance Date	  */
-	public void setAttendanceDate (Timestamp AttendanceDate);
+	/** Set Attendance Status	  */
+	public void setAttendance_Status (String Attendance_Status);
 
-	/** Get Attendance Date	  */
-	public Timestamp getAttendanceDate();
+	/** Get Attendance Status	  */
+	public String getAttendance_Status();
 
-    /** Column name BPartnerValue */
-    public static final String COLUMNNAME_BPartnerValue = "BPartnerValue";
+    /** Column name Auth_Method */
+    public static final String COLUMNNAME_Auth_Method = "Auth_Method";
 
-	/** Set Business Partner Key.
-	  * Key of the Business Partner
+	/** Set Authentication Method	  */
+	public void setAuth_Method (String Auth_Method);
+
+	/** Get Authentication Method	  */
+	public String getAuth_Method();
+
+    /** Column name Auth_Result */
+    public static final String COLUMNNAME_Auth_Result = "Auth_Result";
+
+	/** Set Authentication Result	  */
+	public void setAuth_Result (String Auth_Result);
+
+	/** Get Authentication Result	  */
+	public String getAuth_Result();
+
+    /** Column name Card_Reader */
+    public static final String COLUMNNAME_Card_Reader = "Card_Reader";
+
+	/** Set Card Reader	  */
+	public void setCard_Reader (String Card_Reader);
+
+	/** Get Card Reader	  */
+	public String getCard_Reader();
+
+    /** Column name C_BPartner_ID */
+    public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
+
+	/** Set Business Partner.
+	  * Identifies a Business Partner
 	  */
-	public void setBPartnerValue (String BPartnerValue);
+	public void setC_BPartner_ID (int C_BPartner_ID);
 
-	/** Get Business Partner Key.
-	  * Key of the Business Partner
+	/** Get Business Partner.
+	  * Identifies a Business Partner
 	  */
-	public String getBPartnerValue();
+	public int getC_BPartner_ID();
+
+	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -102,29 +131,77 @@ public interface I_I_Attendance
 	  */
 	public int getCreatedBy();
 
-    /** Column name Description */
-    public static final String COLUMNNAME_Description = "Description";
+    /** Column name Date_Stamp */
+    public static final String COLUMNNAME_Date_Stamp = "Date_Stamp";
 
-	/** Set Description.
-	  * Optional short description of the record
-	  */
-	public void setDescription (String Description);
+	/** Set Date Stamp	  */
+	public void setDate_Stamp (Timestamp Date_Stamp);
 
-	/** Get Description.
-	  * Optional short description of the record
-	  */
-	public String getDescription();
+	/** Get Date Stamp	  */
+	public Timestamp getDate_Stamp();
 
-    /** Column name HR_Attendance_ID */
-    public static final String COLUMNNAME_HR_Attendance_ID = "HR_Attendance_ID";
+    /** Column name Department */
+    public static final String COLUMNNAME_Department = "Department";
 
-	/** Set Attendance	  */
-	public void setHR_Attendance_ID (int HR_Attendance_ID);
+	/** Set Department	  */
+	public void setDepartment (String Department);
 
-	/** Get Attendance	  */
-	public int getHR_Attendance_ID();
+	/** Get Department	  */
+	public String getDepartment();
 
-	public I_HR_Attendance getHR_Attendance() throws RuntimeException;
+    /** Column name Device_Name */
+    public static final String COLUMNNAME_Device_Name = "Device_Name";
+
+	/** Set Device Name	  */
+	public void setDevice_Name (String Device_Name);
+
+	/** Get Device Name	  */
+	public String getDevice_Name();
+
+    /** Column name Device_SN */
+    public static final String COLUMNNAME_Device_SN = "Device_SN";
+
+	/** Set Device Serial Number	  */
+	public void setDevice_SN (String Device_SN);
+
+	/** Get Device Serial Number	  */
+	public String getDevice_SN();
+
+    /** Column name Direction */
+    public static final String COLUMNNAME_Direction = "Direction";
+
+	/** Set Direction	  */
+	public void setDirection (String Direction);
+
+	/** Get Direction	  */
+	public String getDirection();
+
+    /** Column name Face_Mask */
+    public static final String COLUMNNAME_Face_Mask = "Face_Mask";
+
+	/** Set Face Mask	  */
+	public void setFace_Mask (String Face_Mask);
+
+	/** Get Face Mask	  */
+	public String getFace_Mask();
+
+    /** Column name Full_Name */
+    public static final String COLUMNNAME_Full_Name = "Full_Name";
+
+	/** Set Full Name	  */
+	public void setFull_Name (String Full_Name);
+
+	/** Get Full Name	  */
+	public String getFull_Name();
+
+    /** Column name HR_ClockCode */
+    public static final String COLUMNNAME_HR_ClockCode = "HR_ClockCode";
+
+	/** Set Clock Code	  */
+	public void setHR_ClockCode (String HR_ClockCode);
+
+	/** Get Clock Code	  */
+	public String getHR_ClockCode();
 
     /** Column name I_Attendance_ID */
     public static final String COLUMNNAME_I_Attendance_ID = "I_Attendance_ID";
@@ -138,11 +215,20 @@ public interface I_I_Attendance
     /** Column name I_Attendance_UU */
     public static final String COLUMNNAME_I_Attendance_UU = "I_Attendance_UU";
 
-	/** Set I_Attendance_UU	  */
+	/** Set I_attendance_UU	  */
 	public void setI_Attendance_UU (String I_Attendance_UU);
 
-	/** Get I_Attendance_UU	  */
+	/** Get I_attendance_UU	  */
 	public String getI_Attendance_UU();
+
+    /** Column name ID_Card */
+    public static final String COLUMNNAME_ID_Card = "ID_Card";
+
+	/** Set ID Card	  */
+	public void setID_Card (String ID_Card);
+
+	/** Get ID Card	  */
+	public String getID_Card();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
@@ -157,18 +243,54 @@ public interface I_I_Attendance
 	  */
 	public boolean isActive();
 
-    /** Column name Name */
-    public static final String COLUMNNAME_Name = "Name";
+    /** Column name Processed */
+    public static final String COLUMNNAME_Processed = "Processed";
 
-	/** Set Name.
-	  * Alphanumeric identifier of the entity
+	/** Set Processed.
+	  * The document has been processed
 	  */
-	public void setName (String Name);
+	public void setProcessed (boolean Processed);
 
-	/** Get Name.
-	  * Alphanumeric identifier of the entity
+	/** Get Processed.
+	  * The document has been processed
 	  */
-	public String getName();
+	public boolean isProcessed();
+
+    /** Column name Processing */
+    public static final String COLUMNNAME_Processing = "Processing";
+
+	/** Set Process Now	  */
+	public void setProcessing (boolean Processing);
+
+	/** Get Process Now	  */
+	public boolean isProcessing();
+
+    /** Column name Skin_Temperature */
+    public static final String COLUMNNAME_Skin_Temperature = "Skin_Temperature";
+
+	/** Set Skin Temperature	  */
+	public void setSkin_Temperature (String Skin_Temperature);
+
+	/** Get Skin Temperature	  */
+	public String getSkin_Temperature();
+
+    /** Column name Temperature */
+    public static final String COLUMNNAME_Temperature = "Temperature";
+
+	/** Set Temperature	  */
+	public void setTemperature (String Temperature);
+
+	/** Get Temperature	  */
+	public String getTemperature();
+
+    /** Column name Time_Stamp */
+    public static final String COLUMNNAME_Time_Stamp = "Time_Stamp";
+
+	/** Set Time Stamp	  */
+	public void setTime_Stamp (Timestamp Time_Stamp);
+
+	/** Get Time Stamp	  */
+	public Timestamp getTime_Stamp();
 
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";
