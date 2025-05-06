@@ -1,10 +1,10 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: com.cdsoftware.lirion.attendance Test
-Bundle-SymbolicName: com.cdsoftware.lirion.attendance.test
+Bundle-Name: com.cdsoftware.attendance Test
+Bundle-SymbolicName: com.cdsoftware.attendance.test
 Bundle-Version: 10.0.0.qualifier
 Bundle-Vendor: cdsoftware
-Fragment-Host: com.cdsoftware.lirion.attendance
+Fragment-Host: com.cdsoftware.attendance
 Bundle-ClassPath: .,
  lib/junit-jupiter-engine.jar,
  lib/junit-jupiter-api.jar,

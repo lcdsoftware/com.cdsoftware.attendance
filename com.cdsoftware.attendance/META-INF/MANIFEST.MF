@@ -1,8 +1,8 @@
 Manifest-Version: 1.0
 Bundle-Category: idempiere-plugin
 Bundle-ManifestVersion: 2
-Bundle-Name: com.cdsoftware.lirion.attendance
-Bundle-SymbolicName: com.cdsoftware.lirion.attendance
+Bundle-Name: com.cdsoftware.attendance
+Bundle-SymbolicName: com.cdsoftware.attendance
 Bundle-Version: 10.0.0.qualifier
 Bundle-Vendor: cdsoftware
 Bundle-ActivationPolicy: lazy

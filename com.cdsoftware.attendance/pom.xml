@@ -11,7 +11,7 @@
 	<properties>
 		<revision>10.0.0-SNAPSHOT</revision>
 	</properties>
-	<artifactId>com.cdsoftware.lirion.attendance</artifactId>
+	<artifactId>com.cdsoftware.attendance</artifactId>
 	<packaging>eclipse-plugin</packaging>
 	<build>
 		<plugins>
