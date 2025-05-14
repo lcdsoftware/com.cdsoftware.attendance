@@ -1,8 +1,8 @@
 pipeline {
     agent none
     environment {
-        PLUGIN_NAME = "com.cdsoftware.lirion.attendance"
-        PLUGIN_NAME2 = "com.cdsoftware.lirion.payroll"
+        PLUGIN_NAME = "com.cdsoftware.attendance"
+        PLUGIN_NAME2 = "com.cdsoftware.payroll"
         PLUGIN_NAME3 = "org.globalqss.idempiere.LCO.detailednames"
         IDEMPIERE_VERSION = "10.0.0"
         
@@ -22,7 +22,7 @@ pipeline {
                 }
                 dir ('v10p'){
                     
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'bitbucket', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.lirion.payroll.git']])
+                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'bitbucket', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.payroll.git']])
                 
                 }
                 dir('target-platform') {
