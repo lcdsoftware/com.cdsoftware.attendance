@@ -54,19 +54,24 @@ public class AddMissingDates extends CustomProcess{
 	@Override
 	protected String doIt() throws Exception {
 		//MHR_Attendance at=null;
-		List<MHR_Attendance> atlist=new ArrayList<MHR_Attendance>();
+		//List<MHR_Attendance> atlist=new ArrayList<MHR_Attendance>();
 		List<LocalDate> p_dateList=null;
 		ZoneId defaultZoneId = ZoneId.systemDefault();
 		int count=0;
 		if(p_HR_Attendance_ID>0) {
-			atlist.add(new MHR_Attendance(getCtx(), p_HR_Attendance_ID, get_TrxName()));
+			//atlist.add(new MHR_Attendance(getCtx(), p_HR_Attendance_ID, get_TrxName()));
 
 		}
 		else if(p_DateFrom!=null && p_DateTo!=null) {
-			atlist = new Query(getCtx(), MHR_Attendance.Table_Name,"1=1 "+
+			/*atlist = new Query(getCtx(), MHR_Attendance.Table_Name,"1=1 "+
 					(p_DateFrom==null?"":" AND DateFrom <= '"+p_DateFrom+"'")+
 					(p_DateTo==null?"":" AND DateTo >= '"+p_DateTo+"'"), 
-					get_TrxName()).list();
+					get_TrxName()).list();*/
+			//El listado de fechas debe basarse en las lineas no puede buscar la información en la cabecera
+			/*atlist = new Query(getCtx(), MHR_Attendance.Table_Name,"HR_Attendance_ID IN (SELECT HR_Attendance_ID FROM HR_AttendanceLine "
+					+ "WHERE AttendanceDate >= '"+p_DateFrom+"' AND AttendanceDate <= '"+p_DateTo+
+					"' GROUP BY HR_Attendance_ID,AttendanceDate)", 
+					get_TrxName()).list();*/
 		}
 		else
 			return("@Error@: "+Msg.translate(Env.getCtx(), "AddMissingDatesNoParam"));
@@ -86,10 +91,14 @@ public class AddMissingDates extends CustomProcess{
 		for(LocalDate fecha:p_dateList) {
 			//para cada fecha verifico si existe o no el registro
 			if(p_HR_Attendance_ID==0) {
-				at = new Query(getCtx(), MHR_Attendance.Table_Name,
+				/*at = new Query(getCtx(), MHR_Attendance.Table_Name,
 						" DateFrom <= '"+fecha+"'"+
 						" AND DateTo >= '"+fecha+"'", 
-						get_TrxName()).first();	
+						get_TrxName()).first();	*/
+				at = new Query(getCtx(), MHR_Attendance.Table_Name,"HR_Attendance_ID IN (SELECT HR_Attendance_ID FROM HR_AttendanceLine "
+						+ "WHERE AttendanceDate = '"+fecha+
+						"' GROUP BY HR_Attendance_ID,AttendanceDate)", 
+						get_TrxName()).first();
 				if(at==null) {
 					at = new MHR_Attendance(getCtx(), 0, get_TrxName());
 					at.setDateFrom(Timestamp.valueOf(fecha.atStartOfDay()));
