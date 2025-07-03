@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import org.compiere.model.MRefList;
 import org.compiere.model.Query;
+import org.compiere.model.X_C_NonBusinessDay;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -80,6 +81,7 @@ public class AddMissingDates extends CustomProcess{
 	private Timestamp p_DateFrom;
 	private Timestamp p_DateTo;
 	MHR_Attendance attendance;
+	private boolean delete = false;
 	@Override
 	protected void prepare() {
 		// TODO Auto-generated method stub
@@ -87,53 +89,83 @@ public class AddMissingDates extends CustomProcess{
 		for (ProcessInfoParameter para: parameters)
 		{
 			String name = para.getParameterName();
-			if (para.getParameter() == null)
-				;
+			if (para.getParameter() == null) continue;
 			else if (name.equals("HR_Attendance_ID"))
 				p_HR_Attendance_ID = para.getParameterAsInt();
 			else if(name.equals("DateFrom")) {
 				p_DateFrom=para.getParameterAsTimestamp();
 				p_DateTo=para.getParameter_ToAsTimestamp();
 			}
+			else if (name.equals("delete"))
+				delete = para.getParameterAsBoolean();
 		}
 
 	}
 
 	@Override
 	protected String doIt() throws Exception {
+		if(delete) {
+			Object[] params = new Object[]{p_DateFrom, p_DateTo, getAD_Client_ID()};
+			int lines = DB.executeUpdate("DELETE FROM HR_AttendanceLine WHERE AttendanceDate BETWEEN ? AND ? AND TotalQtyOfHours = 0 AND AD_Client_ID = ?"
+					,params
+					,false
+					,get_TrxName());
+			
+			int header = DB.executeUpdate("DELETE FROM HR_Attendance WHERE HR_Attendance_ID NOT IN (SELECT HR_Attendance_ID FROM HR_AttendanceLine WHERE AD_Client_ID = ?) AND AD_Client_ID = ?"
+					,new Object[] {getAD_Client_ID(),getAD_Client_ID()}
+					,false
+					,get_TrxName());
+			return "Borradas "+lines+" Lineas y "+header+" registros de asistencia.";
+		}
+		
 		List<LocalDate> p_dateList=null;
 		ZoneId defaultZoneId = ZoneId.systemDefault();
 		int count=0;
 		if(p_HR_Attendance_ID==0 && p_DateFrom == null && p_DateTo == null)
 			return("@Error@: "+Msg.translate(Env.getCtx(), "AddMissingDatesNoParam"));
 		
-		MHR_Attendance at = null;
+		MHR_Attendance attendanceHeader = null;
 		if(p_HR_Attendance_ID>0) {
-			at = new MHR_Attendance(getCtx(), p_HR_Attendance_ID, get_TrxName());
-			if(at.getDateFrom()==null)
+			attendanceHeader = new MHR_Attendance(getCtx(), p_HR_Attendance_ID, get_TrxName());
+			if(attendanceHeader.getDateFrom()==null)
 				return "@Error@La Asistencia no tiene Fecha desde, por favor verififique el registro";
-			if(at.getDateTo()==null)
+			if(attendanceHeader.getDateTo()==null)
 				return "@Error@La Asistencia no tiene Fecha hasta, por favor verififique el registro";
-			p_dateList = getDatesBetween(at.getDateFrom().toLocalDateTime().toLocalDate(),at.getDateTo().toLocalDateTime().toLocalDate());
+			p_dateList = getDatesBetween(attendanceHeader.getDateFrom().toLocalDateTime().toLocalDate(),attendanceHeader.getDateTo().toLocalDateTime().toLocalDate());
 		}				
 		else
 			p_dateList = getDatesBetween(p_DateFrom.toLocalDateTime().toLocalDate(),p_DateTo.toLocalDateTime().toLocalDate());
 		
+		
+		List<X_C_NonBusinessDay> dateListNonBussiness = new Query(getCtx(), "C_NonBusinessDay", "date1 BETWEEN ? AND ?",get_TrxName())
+				.setClient_ID()
+				.setOnlyActiveRecords(true)
+				.setParameters(p_DateFrom,p_DateTo)
+				.list();
+		
+		List<LocalDate> listNonBusiness = new ArrayList<>();
+		for(X_C_NonBusinessDay NonBussiness:dateListNonBussiness) {
+			listNonBusiness.add(NonBussiness.getDate1().toLocalDateTime().toLocalDate());
+		}
+		
+        // Eliminar de Lista de dias los elementos que están en el listado de dias feriados
+		p_dateList.removeAll(listNonBusiness);
+        
 		for(LocalDate fecha:p_dateList) {
 			this.statusUpdate("Analizando Dia "+fecha);
 			Timestamp attendanceDate = Timestamp.valueOf(fecha.atStartOfDay());
 			String weekDay = getWeekDayValue(Date.from(fecha.atStartOfDay(defaultZoneId).toInstant()));
 			//para cada fecha verifico si existe o no el registro
 			if(p_HR_Attendance_ID==0) {
-				at = new Query(getCtx(), MHR_Attendance.Table_Name,"HR_Attendance_ID IN (SELECT HR_Attendance_ID FROM HR_AttendanceLine "
+				attendanceHeader = new Query(getCtx(), MHR_Attendance.Table_Name,"HR_Attendance_ID IN (SELECT HR_Attendance_ID FROM HR_AttendanceLine "
 						+ "WHERE AttendanceDate = '"+fecha+
 						"' GROUP BY HR_Attendance_ID,AttendanceDate)", 
 						get_TrxName()).first();
-				if(at==null) {
-					at = new MHR_Attendance(getCtx(), 0, get_TrxName());
-					at.setDateFrom(Timestamp.valueOf(fecha.atStartOfDay()));
-					at.setDateTo(Timestamp.valueOf(fecha.atStartOfDay()));
-					at.saveEx();
+				if(attendanceHeader==null) {
+					attendanceHeader = new MHR_Attendance(getCtx(), 0, get_TrxName());
+					attendanceHeader.setDateFrom(Timestamp.valueOf(fecha.atStartOfDay()));
+					attendanceHeader.setDateTo(Timestamp.valueOf(fecha.atStartOfDay()));
+					attendanceHeader.saveEx();
 				}
 			}
 			PreparedStatement pstmt = null;
@@ -160,15 +192,17 @@ public class AddMissingDates extends CustomProcess{
 					String whereClauseBpShiftLine = "GH_Shifts_ID = "+bpShift.getGH_Shifts_ID()
 							+ " AND RestDay !='Y' AND WeekDay = '"+weekDay+"'";
 					
+					
+					
 					MGH_ShiftsLine bpShiftLine = new Query(getCtx(), MGH_ShiftsLine.Table_Name, whereClauseBpShiftLine, this.get_TrxName()).first();
 					if(bpShiftLine==null)
 						continue;
-					MHR_AttendanceLine atline = new Query(getCtx(), "HR_AttendanceLine",
+					MHR_AttendanceLine attendanceLine = new Query(getCtx(), "HR_AttendanceLine",
 							"C_BPartner_ID="+c_bpartner_id+
-							" AND HR_Attendance_ID="+at.getHR_Attendance_ID()+
+							" AND HR_Attendance_ID="+attendanceHeader.getHR_Attendance_ID()+
 							" AND AttendanceDate='"+fecha+"'",
 							get_TrxName()).first();
-					if(atline==null) {
+					if(attendanceLine==null) {
 						count++;
 						//log.warning("Tercero"+c_bpartner_id+" fecha "+fecha);
 						MHR_AttendanceLine newline = new MHR_AttendanceLine(getCtx(),0,get_TrxName());
@@ -177,7 +211,7 @@ public class AddMissingDates extends CustomProcess{
 						newline.setQtyOfHours1(Env.ZERO);
 						newline.setQtyOfHours2(Env.ZERO);
 						newline.setTotalQtyOfHours(Env.ZERO);
-						newline.setHR_Attendance_ID(at.getHR_Attendance_ID());
+						newline.setHR_Attendance_ID(attendanceHeader.getHR_Attendance_ID());
 						newline.setWeekDay(weekDay);
 						newline.saveEx();
 					}
