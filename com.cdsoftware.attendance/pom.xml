@@ -9,7 +9,7 @@
 		<relativePath>../../../idempiere/org.idempiere.parent/pom.xml</relativePath>
 	</parent>
 	<properties>
-		<revision>10.0.0-SNAPSHOT</revision>
+		<revision>12.0.0-SNAPSHOT</revision>
 	</properties>
 	<artifactId>com.cdsoftware.attendance</artifactId>
 	<packaging>eclipse-plugin</packaging>
