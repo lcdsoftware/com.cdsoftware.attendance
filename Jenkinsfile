@@ -25,7 +25,7 @@ pipeline {
                     checkout scmGit(branches: [[name: '*/12.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.base.git']])             
                 }  
                 dir ('d4'){
-                    git branch: '12.0.0', url: 'https://github.com/egil0902/globalqss-idempiere-lco.git'             
+                    git branch: '10.0.0', url: 'https://github.com/egil0902/globalqss-idempiere-lco.git'             
                 }  
                 dir('target-platform') {
                     git branch: '12.0', url: 'https://github.com/ingeint/idempiere-target-platform-plugin.git'
