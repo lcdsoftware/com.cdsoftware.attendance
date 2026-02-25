@@ -26,7 +26,7 @@ pipeline {
                     checkout scmGit(branches: [[name: '*/12.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.base.git']])             
                 }  
                 dir ('d4'){
-                    checkout scmGit(branches: [[name: '*/12.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.base.git']])             
+                    checkout scmGit(branches: [[name: '*/12.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/globalqss-idempiere-lco.git']])             
                 }
                  dir ('d5'){
                     checkout scmGit(branches: [[name: '*/12.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.location.git']])             
