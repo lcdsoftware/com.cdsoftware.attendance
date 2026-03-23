@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -207,12 +208,14 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					//Cambio de dia o de tercero, valido momento de la ultima marcacion, si no fue en la salida ajusto la ultima marcación a hora de salida
 					checkLastAttendanceTime(alID);
 					i=1;
-					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
-					al.setHR_Attendance_ID(attendance.get_ID());
+					// --------------------------------------------------------------------
+					// Manejo de duplicados: buscar si ya existe la línea del día/tercero
+					// --------------------------------------------------------------------
 					StringBuilder whereclause = new StringBuilder();
 					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
 					//Realizar busqueda solo en terceros activos y que tengan el check de colaborador
-					whereclause.append(" AND IsEmployee='Y' AND Isactive='Y'");
+					//whereclause.append(" AND IsEmployee='Y' AND Isactive='Y'");
+					whereclause.append(" AND IsEmployee='Y'");
 					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, 							
 							whereclause.toString(), get_TrxName()).setParameters(line.getValue())
 							.setClient_ID()
@@ -225,24 +228,78 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 						}
 						continue;
 					}
-					al.setC_BPartner_ID(employed.getC_BPartner_ID());
-					al.setWeekDay(getWeekDayValue(parsedDate));
-					al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
-					if(p_HasHoursColumns) {
-						time1 = formatTimeField(line.getTime1());
-						al.setTime1(time1);
-						time2 = formatTimeField(line.getTime2());
-						al.setTime2(time2);
-						time3 = formatTimeField(line.getTime3());
-						al.setTime3(time3);
-						time4 = formatTimeField(line.getTime4());
-						al.setTime4(time4);
+
+					MHR_AttendanceLine al = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
+					if (al == null) {
+						al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
+						al.setHR_Attendance_ID(attendance.get_ID());
+						al.setC_BPartner_ID(employed.getC_BPartner_ID());
+						al.setWeekDay(getWeekDayValue(parsedDate));
+						al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
+						if(p_HasHoursColumns) {
+							time1 = formatTimeField(line.getTime1());
+							al.setTime1(time1);
+							time2 = formatTimeField(line.getTime2());
+							al.setTime2(time2);
+							time3 = formatTimeField(line.getTime3());
+							al.setTime3(time3);
+							time4 = formatTimeField(line.getTime4());
+							al.setTime4(time4);
+						}
+						else {
+							time1 = formatTimeField(parsedDateTime);						
+							al.setTime1(time1);
+						}
+						try {
+							al.saveEx();
+						} catch (Exception e) {
+							if (isUniqueViolation(e)) {
+								// otro proceso la insertó: obtén y reutiliza
+								MHR_AttendanceLine existing = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
+								if (existing != null) {
+									al = existing;
+									al.setHR_Attendance_ID(attendance.get_ID());
+									// merge sencillo: no sobreescribir horas ya existentes
+									if (p_HasHoursColumns) {
+										Timestamp t1 = formatTimeField(line.getTime1());
+										Timestamp t2 = formatTimeField(line.getTime2());
+										Timestamp t3 = formatTimeField(line.getTime3());
+										Timestamp t4 = formatTimeField(line.getTime4());
+										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+										if (al.getTime2()==null && t2!=null) al.setTime2(t2);
+										if (al.getTime3()==null && t3!=null) al.setTime3(t3);
+										if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+									} else {
+										Timestamp t1 = formatTimeField(parsedDateTime);
+										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+									}
+									al.saveEx();
+								} else {
+									throw e;
+								}
+							} else {
+								throw e;
+							}
+						}
+					} else {
+						// Ya existía: asegurar header actual y completar horas faltantes
+						al.setHR_Attendance_ID(attendance.get_ID());
+						if(p_HasHoursColumns) {
+							Timestamp t1 = formatTimeField(line.getTime1());
+							Timestamp t2 = formatTimeField(line.getTime2());
+							Timestamp t3 = formatTimeField(line.getTime3());
+							Timestamp t4 = formatTimeField(line.getTime4());
+							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+							if (al.getTime2()==null && t2!=null) al.setTime2(t2);
+							if (al.getTime3()==null && t3!=null) al.setTime3(t3);
+							if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+						} else {
+							Timestamp t1 = formatTimeField(parsedDateTime);
+							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+						}
+						al.saveEx();
 					}
-					else {
-						time1 = formatTimeField(parsedDateTime);						
-						al.setTime1(time1);
-					}						
-					al.saveEx();
+
 					this.statusUpdate("Procesando: "+count+"/"+sortedvalueDatelist.size()+" "+employed.getValue()+" "+employed.getName()+" "+parsedDateTime);
 					day=parsedDate.toString();
 					emp=line.getValue();
@@ -434,12 +491,14 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 					//Cambio de dia o de tercero, valido momento de la ultima marcacion, si no fue en la salida ajusto la ultima marcación a hora de salida
 					checkLastAttendanceTime(alID);
 					i=1;
-					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
-					al.setHR_Attendance_ID(attendance.get_ID());
+					// --------------------------------------------------------------------
+					// Manejo de duplicados: buscar si ya existe la línea del día/tercero
+					// --------------------------------------------------------------------
 					StringBuilder whereclause = new StringBuilder();
 					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
 					//Realizar busqueda solo en terceros activos y que tengan el check de colaborador
-					whereclause.append(" AND IsEmployee='Y' AND Isactive='Y'");
+					//whereclause.append(" AND IsEmployee='Y' AND Isactive='Y'");
+					whereclause.append(" AND IsEmployee='Y'");
 					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, 							
 							whereclause.toString(), get_TrxName()).setParameters(line.getValue())
 							.setClient_ID()
@@ -452,24 +511,78 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 						}
 						continue;
 					}
-					al.setC_BPartner_ID(employed.getC_BPartner_ID());
-					al.setWeekDay(getWeekDayValue(parsedDate));
-					al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
-					if(p_HasHoursColumns) {
-						time1 = formatTimeField(line.getTime1());
-						al.setTime1(time1);
-						time2 = formatTimeField(line.getTime2());
-						al.setTime2(time2);
-						time3 = formatTimeField(line.getTime3());
-						al.setTime3(time3);
-						time4 = formatTimeField(line.getTime4());
-						al.setTime4(time4);
+
+					MHR_AttendanceLine al = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
+					if (al == null) {
+						al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
+						al.setHR_Attendance_ID(attendance.get_ID());
+						al.setC_BPartner_ID(employed.getC_BPartner_ID());
+						al.setWeekDay(getWeekDayValue(parsedDate));
+						al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
+						if(p_HasHoursColumns) {
+							time1 = formatTimeField(line.getTime1());
+							al.setTime1(time1);
+							time2 = formatTimeField(line.getTime2());
+							al.setTime2(time2);
+							time3 = formatTimeField(line.getTime3());
+							al.setTime3(time3);
+							time4 = formatTimeField(line.getTime4());
+							al.setTime4(time4);
+						}
+						else {
+							time1 = formatTimeField(parsedDateTime);						
+							al.setTime1(time1);
+						}
+						try {
+							al.saveEx();
+						} catch (Exception e) {
+							if (isUniqueViolation(e)) {
+								// otro proceso la insertó: obtén y reutiliza
+								MHR_AttendanceLine existing = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
+								if (existing != null) {
+                                    al = existing;
+									al.setHR_Attendance_ID(attendance.get_ID());
+									// merge sencillo: no sobreescribir horas ya existentes
+									if (p_HasHoursColumns) {
+										Timestamp t1 = formatTimeField(line.getTime1());
+										Timestamp t2 = formatTimeField(line.getTime2());
+										Timestamp t3 = formatTimeField(line.getTime3());
+										Timestamp t4 = formatTimeField(line.getTime4());
+										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+										if (al.getTime2()==null && t2!=null) al.setTime2(t2);
+										if (al.getTime3()==null && t3!=null) al.setTime3(t3);
+										if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+									} else {
+										Timestamp t1 = formatTimeField(parsedDateTime);
+										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+									}
+									al.saveEx();
+								} else {
+									throw e;
+								}
+							} else {
+								throw e;
+							}
+						}
+					} else {
+						// Ya existía: asegurar header actual y completar horas faltantes
+						al.setHR_Attendance_ID(attendance.get_ID());
+						if(p_HasHoursColumns) {
+							Timestamp t1 = formatTimeField(line.getTime1());
+							Timestamp t2 = formatTimeField(line.getTime2());
+							Timestamp t3 = formatTimeField(line.getTime3());
+							Timestamp t4 = formatTimeField(line.getTime4());
+							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+							if (al.getTime2()==null && t2!=null) al.setTime2(t2);
+							if (al.getTime3()==null && t3!=null) al.setTime3(t3);
+							if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+						} else {
+							Timestamp t1 = formatTimeField(parsedDateTime);
+							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+						}
+						al.saveEx();
 					}
-					else {
-						time1 = formatTimeField(parsedDateTime);						
-						al.setTime1(time1);
-					}						
-					al.saveEx();
+
 					this.statusUpdate("Procesando: "+count+"/"+sortedvalueDatelist.size()+" "+employed.getValue()+" "+employed.getName()+" "+al.getAttendanceDate());
 					day=parsedDate.toString();
 					emp=line.getValue();
@@ -896,5 +1009,53 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			al.saveEx();
 		}			
 	}
+
+	// ------------------------------------------------------------------------
+	// Helpers para manejo de duplicados (sin cambiar estructura global)
+	// ------------------------------------------------------------------------
+
+	// Busca una línea existente por (C_BPartner_ID, AttendanceDate en el día dado)
+	private MHR_AttendanceLine findExistingAttendanceLine(int bpartnerId, Date dateOnly) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(dateOnly);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		Timestamp start = new Timestamp(cal.getTimeInMillis());
+		cal.add(Calendar.DAY_OF_MONTH, 1);
+		Timestamp end = new Timestamp(cal.getTimeInMillis());
+
+		String where = "C_BPartner_ID=? AND AttendanceDate>=? AND AttendanceDate<?";
+		return new Query(getCtx(), MHR_AttendanceLine.Table_Name, where, get_TrxName())
+				.setParameters(bpartnerId, start, end)
+				.setOnlyActiveRecords(true)
+				.first();
+	}
+
+	// Detecta violación de unicidad (SQLState 23505 en PostgreSQL) o mensajes típicos
+	// Detecta violación de unicidad usando SQLState 23505 (estándar en PostgreSQL) o mensajes típicos
+	private boolean isUniqueViolation(Throwable t) {
+	    while (t != null) {
+	        if (t instanceof SQLException) {
+	            String sqlState = ((SQLException) t).getSQLState();
+	            if ("23505".equals(sqlState)) {
+	                return true;
+	            }
+	        }
+	        String msg = t.getMessage();
+	        if (msg != null) {
+	            if (msg.contains("SaveErrorNotUnique") ||
+	                msg.contains("duplicate key value") ||
+	                (msg.contains("restricci") && msg.contains("unicidad")) || // mensajes en español
+	                msg.contains("nonduplicatedlines")) {
+	                return true;
+	            }
+	        }
+	        t = t.getCause();
+	    }
+	    return false;
+	}
+
 	
 }
