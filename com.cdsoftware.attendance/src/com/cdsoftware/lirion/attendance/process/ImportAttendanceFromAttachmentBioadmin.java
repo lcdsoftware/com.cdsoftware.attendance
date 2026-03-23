@@ -198,8 +198,10 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			int count = 0;
 			for (attendanceCsvLine line : sortedvalueDatelist) {
 				count++;
-				if(line.getValue().length()==0)
-					break;
+				if(line.getValue() == null || line.getValue().trim().length() == 0) {
+				    log.warning("Linea ignorada por codigo de empleado vacio");
+				    continue;
+				};
 				Date parsedDateTime,parsedDate;
 				parsedDateTime = line.getDate();
 				//parsedDate = dateFormat.parse(dateFormat.format(parsedDateTime));
@@ -449,8 +451,9 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 				
 				Date parsedDateTime = dateTimeFormat.parse(formattedDate);
 				firstDate = extraerFecha(parsedDateTime, dateTimeFormat);
-				String bpCode=csvLine[bpIndex];
-				bpCode = bpCode.replace("\"", "");
+			
+				String bpCode = csvLine[bpIndex];
+				bpCode = bpCode.replace("\"", "").trim();
 				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode,parsedDateTime);
 				if(p_HasHoursColumns) {
 					SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm", Locale.US);
@@ -481,8 +484,10 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			int count = 0;
 			for (attendanceCsvLine line : sortedvalueDatelist) {
 				count++;
-				if(line.getValue().length()==0)
-					break;
+				if(line.getValue() == null || line.getValue().trim().length() == 0) {
+				    log.warning("Linea ignorada por codigo de empleado vacio");
+				    continue;
+				}
 				Date parsedDateTime,parsedDate;
 				parsedDateTime = line.getDate();
 				//parsedDate = dateFormat.parse(dateFormat.format(parsedDateTime));
