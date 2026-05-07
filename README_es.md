@@ -34,7 +34,7 @@ Este plugin ofrece un sistema completo para la gestión de asistencia, turnos y 
 
 ## Prerrequisitos
 
-- Java 11, comandos `java` and `javac`.
+- Java 11, comandos `java` y `javac`.
 - iDempiere 10
 - Configurar la variable de entorno `IDEMPIERE_REPOSITORY`
 - Dependencias: `joda-time`, `json`.
