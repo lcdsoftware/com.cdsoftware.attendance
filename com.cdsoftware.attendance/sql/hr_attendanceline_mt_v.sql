@@ -101,8 +101,8 @@ AS
      LEFT JOIN hr_job job ON job.hr_job_id = emp.hr_job_id AND job.isactive = 'Y'::bpchar
      LEFT JOIN ad_ref_list ON ad_ref_list.value::bpchar = al.weekday AND ad_ref_list.ad_reference_id = 167::numeric
      LEFT JOIN ad_ref_list_trl weekday_trl ON weekday_trl.ad_ref_list_id = ad_ref_list.ad_ref_list_id AND weekday_trl.ad_language::text = 'es_PA'::text
-     LEFT JOIN hr_c_bpartnershifts bpshift ON bpshift.c_bpartner_id = bp.c_bpartner_id AND al.attendancedate >= COALESCE(bpshift.datefrom, '2000-01-01 00:00:00'::timestamp without time zone) AND al.attendancedate <= COALESCE(bpshift.dateto, '2300-01-01 00:00:00'::timestamp without time zone) AND bpshift.isactive = 'Y'::bpchar
-     LEFT JOIN gh_shifts gh ON gh.gh_shifts_id = bpshift.gh_shifts_id AND gh.isactive = 'Y'::bpchar
+     LEFT JOIN (SELECT DISTINCT ON (c_bpartner_id) gh_shifts_id,c_bpartner_id,datefrom, dateto FROM hr_c_bpartnershifts  WHERE isactive = 'Y' ORDER BY c_bpartner_id,created DESC) bpshift ON bpshift.c_bpartner_id = bp.c_bpartner_id AND al.attendancedate >= COALESCE(bpshift.datefrom, '2000-01-01 00:00:00'::timestamp without time zone) AND al.attendancedate <= COALESCE(bpshift.dateto, '2300-01-01 00:00:00'::timestamp without time zone)     
+	 LEFT JOIN gh_shifts gh ON gh.gh_shifts_id = bpshift.gh_shifts_id AND gh.isactive = 'Y'::bpchar
      LEFT JOIN gh_shiftsline shline ON shline.gh_shifts_id = gh.gh_shifts_id AND shline.isactive = 'Y'::bpchar AND shline.weekday = al.weekday
      LEFT JOIN c_nonbusinessday nbd ON nbd.date1 = al.attendancedate AND nbd.isactive = 'Y'::bpchar
   WHERE
