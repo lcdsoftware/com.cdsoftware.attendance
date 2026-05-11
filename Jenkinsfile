@@ -6,6 +6,7 @@ pipeline {
         PLUGIN_NAME3 = "com.cdsoftware.base"
         PLUGIN_NAME4 = "org.globalqss.idempiere.LCO.detailednames"
         PLUGIN_NAME5 = "com.cdsoftware.location"
+        PLUGIN_NAME6 = "com.cdsoftware.pluginconfig" 
         IDEMPIERE_VERSION = "12.0.0"
         
     }
@@ -30,10 +31,13 @@ pipeline {
                 }
                  dir ('d5'){
                     checkout scmGit(branches: [[name: '*/12.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.location.git']])             
-                }  
+                }
+                 dir ('d6'){
+                    checkout scmGit(branches: [[name: '*/12.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.pluginconfig.git']])             
+                }                 
                 dir('target-platform') {
                     git branch: '12.0', url: 'https://github.com/ingeint/idempiere-target-platform-plugin.git'
-					sh './plugin-builder build ../${PLUGIN_NAME}  ../d2/${PLUGIN_NAME2} ../d3/${PLUGIN_NAME3} ../d4/${PLUGIN_NAME4} ../d5/${PLUGIN_NAME5}'
+					sh './plugin-builder build ../${PLUGIN_NAME}  ../d2/${PLUGIN_NAME2} ../d3/${PLUGIN_NAME3} ../d4/${PLUGIN_NAME4} ../d5/${PLUGIN_NAME5} ../d6/${PLUGIN_NAME6}'
                     archiveArtifacts artifacts: "target/${PLUGIN_NAME}-${IDEMPIERE_VERSION}.${BUILD_NUMBER}.jar", fingerprint: true
                     sh 'rm -rf target ../${PLUGIN_NAME}/target'
                 }
