@@ -21,7 +21,7 @@ pipeline {
             steps {
                              
                 dir ('d2'){
-                    checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.payroll.git']])                           
+                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.payroll.git']])                           
                 }
                 dir ('d3'){
                     checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.base.git']])             
