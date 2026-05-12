@@ -46,7 +46,7 @@ import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
  * [dateIndex] fecha marcacion
  * [2]        Hora Entrada (opcional)
  * [3]        Hora Salida Almuerzo (opcional)
- * [4]        Hora regreso Almuerzo (opcional)
+ * [4]        Hora regreso Almuerzo (opcional).
  * [5]        Hora Salida (opcional)
  * [6]
  * @author alara
