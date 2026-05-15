@@ -46,7 +46,7 @@ import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
  * [dateIndex] fecha marcacion
  * [2]        Hora Entrada (opcional)
  * [3]        Hora Salida Almuerzo (opcional)
- * [4]        Hora regreso Almuerzo (opcional).
+ * [4]        Hora regreso Almuerzo (opcional)
  * [5]        Hora Salida (opcional)
  * [6]
  * @author alara
@@ -113,11 +113,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			return writeAttendanceFromServer();
 	}
 
-	protected String writeAttendance() throws Exception{
+	protected String writeAttendance() throws Exception {
 
-		Timestamp time1=null,time2=null,time3=null,time4=null;
-		String day = "",emp = "";
-		int alID = 0,i = 1;
+		Timestamp time1 = null, time2 = null, time3 = null, time4 = null;
+		String day = "", emp = "";
+		int alID = 0, i = 1;
+
 		MHR_Attendance attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
 		MAttachment attachment = attendance.getAttachment();
 		if (attachment == null) {
@@ -132,57 +133,102 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		if (p_FormatType.equals(X_AD_ImpFormat.FORMATTYPE_CommaSeparated)) {
 			delimiter = ",";
 		} else if (p_FormatType.equals(X_AD_ImpFormat.FORMATTYPE_TabSeparated)) {
-			delimiter = "\t";
+			delimiter = "\\t";
 		} else {
-			throw new IllegalArgumentException ("separador no Valido: " + p_FormatType);
+			throw new IllegalArgumentException("separador no Valido: " + p_FormatType);
 		}
 
 		File csvFile = entry.getFile();
 		FileReader fileReader = new FileReader(csvFile);
 
 		try (BufferedReader br = new BufferedReader(fileReader)) {
-			int countlines=0;
+			int countlines = 0;
 			SimpleDateFormat dateTimeFormat = new SimpleDateFormat(p_DateTimeFormat, Locale.US);
 			String inputLine;
-			ArrayList<attendanceCsvLine> valueDatelist = new ArrayList<>();
+			ArrayList<attendanceCsvLine> valueDatelist = new ArrayList<attendanceCsvLine>();
 
-			Comparator<attendanceCsvLine> compareByName = Comparator
-                    .comparing(attendanceCsvLine::getValue)
-                    .thenComparing(attendanceCsvLine::getDate);
+			Comparator<attendanceCsvLine> compareByName = new Comparator<attendanceCsvLine>() {
+				@Override
+				public int compare(attendanceCsvLine o1, attendanceCsvLine o2) {
+					String v1 = o1 != null ? o1.getValue() : null;
+					String v2 = o2 != null ? o2.getValue() : null;
+
+					if (v1 == null && v2 == null) {
+						Date d1 = o1 != null ? o1.getDate() : null;
+						Date d2 = o2 != null ? o2.getDate() : null;
+						if (d1 == null && d2 == null) {
+							return 0;
+						}
+						if (d1 == null) {
+							return -1;
+						}
+						if (d2 == null) {
+							return 1;
+						}
+						return d1.compareTo(d2);
+					}
+
+					if (v1 == null) {
+						return -1;
+					}
+					if (v2 == null) {
+						return 1;
+					}
+
+					int cmp = v1.compareTo(v2);
+					if (cmp != 0) {
+						return cmp;
+					}
+
+					Date d1 = o1.getDate();
+					Date d2 = o2.getDate();
+
+					if (d1 == null && d2 == null) {
+						return 0;
+					}
+					if (d1 == null) {
+						return -1;
+					}
+					if (d2 == null) {
+						return 1;
+					}
+
+					return d1.compareTo(d2);
+				}
+			};
 
 			while ((inputLine = br.readLine()) != null) {
-				if(countlines==0 && p_HasHeader) {
+				if (countlines == 0 && p_HasHeader) {
 					countlines++;
 					continue;
 				}
 				if (inputLine.isEmpty() || inputLine.startsWith(String.valueOf(delimiter))) {
-				    continue;
+					continue;
 				}
 
 				String[] csvLine = inputLine.split(String.valueOf(delimiter));
-				if(csvLine.length<=1)
-					throw new IllegalArgumentException ("Separador incorrecto: '" + delimiter+"'");
+				if (csvLine.length <= 1) {
+					throw new IllegalArgumentException("Separador incorrecto: '" + delimiter + "'");
+				}
 
-				String formattedDate = csvLine[dateIndex]
-					    .replace("a.m.", "AM").replace("p.m.", "PM")
-					    .replace("a. m.", "AM").replace("p. m.", "PM");
-
+				String formattedDate = normalizeCsvValue(csvLine[dateIndex]);
 				Date parsedDateTime = dateTimeFormat.parse(formattedDate);
-				String bpCode=csvLine[bpIndex].trim();
-				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode,parsedDateTime);
 
-				if(p_HasHoursColumns) {
+				String bpCode = normalizeCsvValue(csvLine[bpIndex]);
+				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode, parsedDateTime);
+
+				if (p_HasHoursColumns) {
 					SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm", Locale.US);
-					int[] hourIndexes = {Hour1Index, Hour2Index, Hour3Index, Hour4Index};
-				    Date[] parsedDateTimes = new Date[4];
-				    for (int j = 0; j < hourIndexes.length; j++) {
-				    	 int index = hourIndexes[i];
-				         if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
-				             parsedDateTimes[i] = formatTime.parse(csvLine[index]
-				            		 .replace("a.m.", "AM").replace("p.m.", "PM")
-									 .replace("a. m.", "AM").replace("p. m.", "PM"));
-				         }
-				     }
+					int[] hourIndexes = { Hour1Index, Hour2Index, Hour3Index, Hour4Index };
+					Date[] parsedDateTimes = new Date[4];
+
+					for (int j = 0; j < hourIndexes.length; j++) {
+						int index = hourIndexes[j];
+						if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
+							parsedDateTimes[j] = formatTime.parse(normalizeCsvValue(csvLine[index]));
+						}
+					}
+
 					atcsvLine.setTime1(formatTimeField(parsedDateTimes[0]));
 					atcsvLine.setTime2(formatTimeField(parsedDateTimes[1]));
 					atcsvLine.setTime3(formatTimeField(parsedDateTimes[2]));
@@ -194,473 +240,527 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			}
 			fileReader.close();
 
-		    List<attendanceCsvLine> sortedvalueDatelist = valueDatelist.stream()
-                    .sorted(compareByName)
-                    .collect(Collectors.toList());
+			List<attendanceCsvLine> sortedvalueDatelist = valueDatelist.stream()
+					.sorted(compareByName)
+					.collect(Collectors.toList());
 
-		    sortedvalueDatelist = filterNearbyMarkings(sortedvalueDatelist, dateTimeFormat);
+			sortedvalueDatelist = filterNearbyMarkings(sortedvalueDatelist, dateTimeFormat);
 
 			String lastnotfoundbp = "";
 			int count = 0;
 			for (attendanceCsvLine line : sortedvalueDatelist) {
 				count++;
-				if(line.getValue() == null || line.getValue().trim().length() == 0) {
-				    log.warning("Linea ignorada por codigo de empleado vacio");
-				    continue;
-				};
 
-				Date parsedDateTime,parsedDate;
-				parsedDateTime = line.getDate();
-				parsedDate = extraerFecha(parsedDateTime, dateTimeFormat);
+				if (line.getValue() == null || line.getValue().trim().length() == 0) {
+					log.warning("Linea ignorada por codigo de empleado vacio");
+					continue;
+				}
 
-				if(day.compareTo(parsedDate.toString())!=0 || emp.compareTo(line.getValue().trim())!=0) {
+				Date parsedDateTime = line.getDate();
+				Date parsedDate = extraerFecha(parsedDateTime, dateTimeFormat);
+
+				if (day.compareTo(parsedDate.toString()) != 0 || emp.compareTo(line.getValue().trim()) != 0) {
 					checkLastAttendanceTime(alID);
-					i=1;
+					i = 1;
 
 					StringBuilder whereclause = new StringBuilder();
 					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
 					whereclause.append(" AND IsEmployee='Y'");
-					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name,
-							whereclause.toString(), get_TrxName()).setParameters(line.getValue())
+
+					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, whereclause.toString(), get_TrxName())
+							.setParameters(line.getValue())
 							.setClient_ID()
 							.first();
-					if(employed==null) {
-						if(lastnotfoundbp.compareTo(line.getValue())!=0) {
-							lastnotfoundbp=line.getValue();
-							usersNotFoundList.append(line.getValue()+",");
-							log.warning("No se encuentra el empleado "+line.getValue());
+
+					if (employed == null) {
+						if (lastnotfoundbp.compareTo(line.getValue()) != 0) {
+							lastnotfoundbp = line.getValue();
+							usersNotFoundList.append(line.getValue()).append(",");
+							log.warning("No se encuentra el empleado " + line.getValue());
 						}
 						continue;
 					}
 
 					MHR_AttendanceLine al = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
+
+					Timestamp newT1 = null;
+					Timestamp newT2 = null;
+					Timestamp newT3 = null;
+					Timestamp newT4 = null;
+
+					if (p_HasHoursColumns) {
+						newT1 = formatTimeField(line.getTime1());
+						newT2 = formatTimeField(line.getTime2());
+						newT3 = formatTimeField(line.getTime3());
+						newT4 = formatTimeField(line.getTime4());
+					} else {
+						newT1 = formatTimeField(parsedDateTime);
+					}
+
 					if (al == null) {
 						al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
 						al.setHR_Attendance_ID(attendance.get_ID());
 						al.setC_BPartner_ID(employed.getC_BPartner_ID());
 						al.setWeekDay(getWeekDayValue(parsedDate));
 						al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
-						if(p_HasHoursColumns) {
-							time1 = formatTimeField(line.getTime1());
-							al.setTime1(time1);
-							time2 = formatTimeField(line.getTime2());
-							al.setTime2(time2);
-							time3 = formatTimeField(line.getTime3());
-							al.setTime3(time3);
-							time4 = formatTimeField(line.getTime4());
-							al.setTime4(time4);
-						}
-						else {
-							time1 = formatTimeField(parsedDateTime);
-							al.setTime1(time1);
-						}
-						try {
-							al.saveEx();
-						} catch (Exception e) {
-							if (isUniqueViolation(e)) {
-								MHR_AttendanceLine existing = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
-								if (existing != null) {
-									al = existing;
-									al.setHR_Attendance_ID(attendance.get_ID());
-									if (p_HasHoursColumns) {
-										Timestamp t1 = formatTimeField(line.getTime1());
-										Timestamp t2 = formatTimeField(line.getTime2());
-										Timestamp t3 = formatTimeField(line.getTime3());
-										Timestamp t4 = formatTimeField(line.getTime4());
-										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-										if (al.getTime2()==null && t2!=null) al.setTime2(t2);
-										if (al.getTime3()==null && t3!=null) al.setTime3(t3);
-										if (al.getTime4()==null && t4!=null) al.setTime4(t4);
-									} else {
-										Timestamp t1 = formatTimeField(parsedDateTime);
-										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-									}
-									al.saveEx();
-								} else {
-									throw e;
-								}
-							} else {
-								throw e;
-							}
-						}
+						al.setTime1(newT1);
+						al.setTime2(newT2);
+						al.setTime3(newT3);
+						al.setTime4(newT4);
+						recalculateCollapsedHours(al);
+
+						al = saveAttendanceLineSafely(al, employed.getC_BPartner_ID(), parsedDate,
+								attendance, newT1, newT2, newT3, newT4);
 					} else {
 						al.setHR_Attendance_ID(attendance.get_ID());
-						if(p_HasHoursColumns) {
-							Timestamp t1 = formatTimeField(line.getTime1());
-							Timestamp t2 = formatTimeField(line.getTime2());
-							Timestamp t3 = formatTimeField(line.getTime3());
-							Timestamp t4 = formatTimeField(line.getTime4());
-							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-							if (al.getTime2()==null && t2!=null) al.setTime2(t2);
-							if (al.getTime3()==null && t3!=null) al.setTime3(t3);
-							if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+
+						if (allStoredTimesAreZeroOrNull(al) && hasAnyRealHour(newT1, newT2, newT3, newT4)) {
+							overwriteTimes(al, newT1, newT2, newT3, newT4);
 						} else {
-							Timestamp t1 = formatTimeField(parsedDateTime);
-							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+							mergeMissingTimes(al, newT1, newT2, newT3, newT4);
 						}
-						al.saveEx();
+
+						al = saveAttendanceLineSafely(al, employed.getC_BPartner_ID(), parsedDate,
+								attendance, newT1, newT2, newT3, newT4);
 					}
 
-					this.statusUpdate("Procesando: "+count+"/"+sortedvalueDatelist.size()+" "+employed.getValue()+" "+employed.getName()+" "+parsedDateTime);
-					day=parsedDate.toString();
-					emp=line.getValue();
-					alID=al.get_ID();
-				}else {
-					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
-					if(p_HasHoursColumns) {
-						if(line.getTime1()!=null) {
-							if(i==2) {
+					time1 = al.getTime1();
+					time2 = al.getTime2();
+					time3 = al.getTime3();
+					time4 = al.getTime4();
+
+					this.statusUpdate("Procesando: " + count + "/" + sortedvalueDatelist.size() + " "
+							+ employed.getValue() + " " + employed.getName() + " " + parsedDateTime);
+
+					day = parsedDate.toString();
+					emp = line.getValue();
+					alID = al.get_ID();
+				} else {
+					MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
+
+					if (p_HasHoursColumns) {
+						if (line.getTime1() != null) {
+							if (i == 2) {
 								time2 = formatTimeField(line.getTime2());
 								al.setTime2(time2);
-								BigDecimal QtyOfHours1=BigDecimal.ZERO;
-								if(time1!=null && time2!=null) {
-									QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+
+								BigDecimal QtyOfHours1 = BigDecimal.ZERO;
+								if (time1 != null && time2 != null) {
+									QtyOfHours1 = BigDecimal.valueOf((time2.getTime() - time1.getTime()) / (1000 * 60))
+											.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours1(QtyOfHours1);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
 							}
-							if(i==3) {
+							if (i == 3) {
 								time3 = formatTimeField(line.getTime3());
 								al.setTime3(time3);
 							}
-							if(i>=4) {
+							if (i >= 4) {
 								time4 = formatTimeField(line.getTime4());
 								al.setTime4(time4);
-								BigDecimal QtyOfHours2=BigDecimal.ZERO;
-								if(time3!=null && time4!=null) {
-									QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+
+								BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+								if (time3 != null && time4 != null) {
+									QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time3.getTime()) / (1000 * 60))
+											.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours2(QtyOfHours2);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
 							}
 						}
-					}
-					else {
-						if(line.getDate()!=null) {
-							if(i==2) {
+					} else {
+						if (line.getDate() != null) {
+							if (i == 2) {
 								time2 = formatTimeField(line.getDate());
 								al.setTime2(time2);
-								BigDecimal QtyOfHours1=BigDecimal.ZERO;
-								if(time1!=null && time2!=null) {
-									QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+
+								BigDecimal QtyOfHours1 = BigDecimal.ZERO;
+								if (time1 != null && time2 != null) {
+									QtyOfHours1 = BigDecimal.valueOf((time2.getTime() - time1.getTime()) / (1000 * 60))
+											.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours1(QtyOfHours1);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
 							}
-							if(i==3) {
+							if (i == 3) {
 								time3 = formatTimeField(line.getDate());
 								al.setTime3(time3);
 							}
-							if(i>=4) {
+							if (i >= 4) {
 								time4 = formatTimeField(line.getDate());
 								al.setTime4(time4);
-								BigDecimal QtyOfHours2=BigDecimal.ZERO;
-								if(time3!=null && time4!=null) {
-									QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+
+								BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+								if (time3 != null && time4 != null) {
+									QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time3.getTime()) / (1000 * 60))
+											.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours2(QtyOfHours2);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
 							}
 						}
 					}
-					al.saveEx();
-					if(count==sortedvalueDatelist.size())
+
+					al = saveAttendanceLineSafely(al, al.getC_BPartner_ID(), al.getAttendanceDate(),
+							attendance, al.getTime1(), al.getTime2(), al.getTime3(), al.getTime4());
+
+					if (count == sortedvalueDatelist.size()) {
 						checkLastAttendanceTime(al.get_ID());
+					}
 				}
+
 				i++;
-				if(i%5000==0)
+				if (i % 5000 == 0) {
 					commitEx();
+				}
 			}
-			if(usersNotFoundList.length()>0) {
-				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: "+usersNotFoundList);
+
+			if (usersNotFoundList.length() > 0) {
+				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: " + usersNotFoundList);
 				attendance.saveEx();
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
 		return null;
 	}
 
-	protected String writeAttendance(String pathName) throws Exception{
+	protected String writeAttendance(String pathName) throws Exception {
 
-		Timestamp time1=null,time2=null,time3=null,time4=null;
-		String day = "",emp = "";
-		int alID = 0,i = 1;
+		Timestamp time1 = null, time2 = null, time3 = null, time4 = null;
+		String day = "", emp = "";
+		int alID = 0, i = 1;
 
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
-		StringBuilder sql = new StringBuilder ("DELETE FROM HR_AttendanceLine ")
-				.append("WHERE HR_Attendance_ID=").append(RECORD_ID).append (clientCheck);
-		int	no = DB.executeUpdate(sql.toString(), get_TrxName());
-		if (log.isLoggable(Level.FINE)) log.fine("Delete Attendance =" + no);
+		StringBuilder sql = new StringBuilder("DELETE FROM HR_AttendanceLine ")
+				.append("WHERE HR_Attendance_ID=").append(RECORD_ID).append(clientCheck);
+		int no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (log.isLoggable(Level.FINE)) {
+			log.fine("Delete Attendance =" + no);
+		}
+
 		MHR_Attendance attendance;
-		if(RECORD_ID >0)
+		if (RECORD_ID > 0) {
 			attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
-		else
+		} else {
 			attendance = new MHR_Attendance(getCtx(), 0, get_TrxName());
+		}
 
 		String delimiter = "";
 		if (p_FormatType.equals(X_AD_ImpFormat.FORMATTYPE_CommaSeparated)) {
 			delimiter = ",";
 		} else if (p_FormatType.equals(X_AD_ImpFormat.FORMATTYPE_TabSeparated)) {
-			delimiter = "\t";
+			delimiter = "\\t";
 		} else {
-			throw new IllegalArgumentException ("separador no Valido: " + p_FormatType);
+			throw new IllegalArgumentException("separador no Valido: " + p_FormatType);
 		}
 
-		File csvFile = new File (pathName);
+		File csvFile = new File(pathName);
 		FileReader fileReader = new FileReader(csvFile);
 
 		try (BufferedReader br = new BufferedReader(fileReader)) {
-			int countlines=0;
+			int countlines = 0;
 			SimpleDateFormat dateTimeFormat = new SimpleDateFormat(p_DateTimeFormat, Locale.US);
 			String inputLine;
-			ArrayList<attendanceCsvLine> valueDatelist = new ArrayList<>();
+			ArrayList<attendanceCsvLine> valueDatelist = new ArrayList<attendanceCsvLine>();
 			Date firstDate = null;
 
-			Comparator<attendanceCsvLine> compareByName = Comparator
-                    .comparing(attendanceCsvLine::getValue)
-                    .thenComparing(attendanceCsvLine::getDate);
+			Comparator<attendanceCsvLine> compareByName = new Comparator<attendanceCsvLine>() {
+				@Override
+				public int compare(attendanceCsvLine o1, attendanceCsvLine o2) {
+					String v1 = o1 != null ? o1.getValue() : null;
+					String v2 = o2 != null ? o2.getValue() : null;
+
+					if (v1 == null && v2 == null) {
+						Date d1 = o1 != null ? o1.getDate() : null;
+						Date d2 = o2 != null ? o2.getDate() : null;
+						if (d1 == null && d2 == null) {
+							return 0;
+						}
+						if (d1 == null) {
+							return -1;
+						}
+						if (d2 == null) {
+							return 1;
+						}
+						return d1.compareTo(d2);
+					}
+
+					if (v1 == null) {
+						return -1;
+					}
+					if (v2 == null) {
+						return 1;
+					}
+
+					int cmp = v1.compareTo(v2);
+					if (cmp != 0) {
+						return cmp;
+					}
+
+					Date d1 = o1.getDate();
+					Date d2 = o2.getDate();
+
+					if (d1 == null && d2 == null) {
+						return 0;
+					}
+					if (d1 == null) {
+						return -1;
+					}
+					if (d2 == null) {
+						return 1;
+					}
+
+					return d1.compareTo(d2);
+				}
+			};
 
 			attendance.setName(new Timestamp(System.currentTimeMillis()).toString());
 			attendance.saveEx();
 
 			while ((inputLine = br.readLine()) != null) {
-				if(countlines==0 && p_HasHeader) {
+				if (countlines == 0 && p_HasHeader) {
 					countlines++;
 					continue;
 				}
 				if (inputLine.isEmpty() || inputLine.startsWith(String.valueOf(delimiter))) {
-				    continue;
+					continue;
 				}
 
 				String[] csvLine = inputLine.split(String.valueOf(delimiter));
-				if(csvLine.length<=1)
-					throw new IllegalArgumentException ("Separador incorrecto: '" + delimiter+"'");
-				String formattedDate = csvLine[dateIndex]
-					    .replace("a.m.", "AM").replace("p.m.", "PM")
-					    .replace("a. m.", "AM").replace("p. m.", "PM");
-				formattedDate = formattedDate.replace("\"", "");
+				if (csvLine.length <= 1) {
+					throw new IllegalArgumentException("Separador incorrecto: '" + delimiter + "'");
+				}
+
+				String formattedDate = normalizeCsvValue(csvLine[dateIndex]);
 
 				Date parsedDateTime = dateTimeFormat.parse(formattedDate);
 				firstDate = extraerFecha(parsedDateTime, dateTimeFormat);
 
-				String bpCode = csvLine[bpIndex];
-				bpCode = bpCode.replace("\"", "").trim();
-				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode,parsedDateTime);
-				if(p_HasHoursColumns) {
+				String bpCode = normalizeCsvValue(csvLine[bpIndex]);
+
+				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode, parsedDateTime);
+
+				if (p_HasHoursColumns) {
 					SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm", Locale.US);
-					int[] hourIndexes = {Hour1Index, Hour2Index, Hour3Index, Hour4Index};
-				    Date[] parsedDateTimes = new Date[4];
-				    for (int j = 0; j < hourIndexes.length; j++) {
-				    	 int index = hourIndexes[i];
-				         if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
-				             parsedDateTimes[i] = formatTime.parse(csvLine[index]
-				            		 .replace("a.m.", "AM").replace("p.m.", "PM")
-									 .replace("a. m.", "AM").replace("p. m.", "PM").replace("\"", ""));
-				         }
-				     }
+					int[] hourIndexes = { Hour1Index, Hour2Index, Hour3Index, Hour4Index };
+					Date[] parsedDateTimes = new Date[4];
+
+					for (int j = 0; j < hourIndexes.length; j++) {
+						int index = hourIndexes[j];
+						if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
+							parsedDateTimes[j] = formatTime.parse(normalizeCsvValue(csvLine[index]));
+						}
+					}
+
 					atcsvLine.setTime1(formatTimeField(parsedDateTimes[0]));
 					atcsvLine.setTime2(formatTimeField(parsedDateTimes[1]));
 					atcsvLine.setTime3(formatTimeField(parsedDateTimes[2]));
 					atcsvLine.setTime4(formatTimeField(parsedDateTimes[3]));
 				}
+
 				valueDatelist.add(atcsvLine);
 				countlines++;
 			}
 			fileReader.close();
 
-		    List<attendanceCsvLine> sortedvalueDatelist = valueDatelist.stream()
-                    .sorted(compareByName)
-                    .collect(Collectors.toList());
+			List<attendanceCsvLine> sortedvalueDatelist = valueDatelist.stream()
+					.sorted(compareByName)
+					.collect(Collectors.toList());
 
-		    sortedvalueDatelist = filterNearbyMarkings(sortedvalueDatelist, dateTimeFormat);
+			sortedvalueDatelist = filterNearbyMarkings(sortedvalueDatelist, dateTimeFormat);
 
 			String lastnotfoundbp = "";
 			int count = 0;
 			for (attendanceCsvLine line : sortedvalueDatelist) {
 				count++;
-				if(line.getValue() == null || line.getValue().trim().length() == 0) {
-				    log.warning("Linea ignorada por codigo de empleado vacio");
-				    continue;
+
+				if (line.getValue() == null || line.getValue().trim().length() == 0) {
+					log.warning("Linea ignorada por codigo de empleado vacio");
+					continue;
 				}
-				Date parsedDateTime,parsedDate;
-				parsedDateTime = line.getDate();
-				parsedDate = extraerFecha(parsedDateTime, dateTimeFormat);
-				if(day.compareTo(parsedDate.toString())!=0 || emp.compareTo(line.getValue().trim())!=0) {
+
+				Date parsedDateTime = line.getDate();
+				Date parsedDate = extraerFecha(parsedDateTime, dateTimeFormat);
+
+				if (day.compareTo(parsedDate.toString()) != 0 || emp.compareTo(line.getValue().trim()) != 0) {
 					checkLastAttendanceTime(alID);
-					i=1;
+					i = 1;
 
 					StringBuilder whereclause = new StringBuilder();
 					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
 					whereclause.append(" AND IsEmployee='Y'");
-					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name,
-							whereclause.toString(), get_TrxName()).setParameters(line.getValue())
+
+					MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, whereclause.toString(), get_TrxName())
+							.setParameters(line.getValue())
 							.setClient_ID()
 							.first();
-					if(employed==null) {
-						if(lastnotfoundbp.compareTo(line.getValue())!=0) {
-							lastnotfoundbp=line.getValue();
-							usersNotFoundList.append(line.getValue()+",");
-							log.warning("No se encuentra el empleado "+line.getValue());
+
+					if (employed == null) {
+						if (lastnotfoundbp.compareTo(line.getValue()) != 0) {
+							lastnotfoundbp = line.getValue();
+							usersNotFoundList.append(line.getValue()).append(",");
+							log.warning("No se encuentra el empleado " + line.getValue());
 						}
 						continue;
 					}
 
 					MHR_AttendanceLine al = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
+
+					Timestamp newT1 = null;
+					Timestamp newT2 = null;
+					Timestamp newT3 = null;
+					Timestamp newT4 = null;
+
+					if (p_HasHoursColumns) {
+						newT1 = formatTimeField(line.getTime1());
+						newT2 = formatTimeField(line.getTime2());
+						newT3 = formatTimeField(line.getTime3());
+						newT4 = formatTimeField(line.getTime4());
+					} else {
+						newT1 = formatTimeField(parsedDateTime);
+					}
+
 					if (al == null) {
 						al = new MHR_AttendanceLine(getCtx(), 0, get_TrxName());
 						al.setHR_Attendance_ID(attendance.get_ID());
 						al.setC_BPartner_ID(employed.getC_BPartner_ID());
 						al.setWeekDay(getWeekDayValue(parsedDate));
 						al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
-						if(p_HasHoursColumns) {
-							time1 = formatTimeField(line.getTime1());
-							al.setTime1(time1);
-							time2 = formatTimeField(line.getTime2());
-							al.setTime2(time2);
-							time3 = formatTimeField(line.getTime3());
-							al.setTime3(time3);
-							time4 = formatTimeField(line.getTime4());
-							al.setTime4(time4);
-						}
-						else {
-							time1 = formatTimeField(parsedDateTime);
-							al.setTime1(time1);
-						}
-						try {
-							al.saveEx();
-						} catch (Exception e) {
-							if (isUniqueViolation(e)) {
-								MHR_AttendanceLine existing = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
-								if (existing != null) {
-                                    al = existing;
-									al.setHR_Attendance_ID(attendance.get_ID());
-									if (p_HasHoursColumns) {
-										Timestamp t1 = formatTimeField(line.getTime1());
-										Timestamp t2 = formatTimeField(line.getTime2());
-										Timestamp t3 = formatTimeField(line.getTime3());
-										Timestamp t4 = formatTimeField(line.getTime4());
-										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-										if (al.getTime2()==null && t2!=null) al.setTime2(t2);
-										if (al.getTime3()==null && t3!=null) al.setTime3(t3);
-										if (al.getTime4()==null && t4!=null) al.setTime4(t4);
-									} else {
-										Timestamp t1 = formatTimeField(parsedDateTime);
-										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-									}
-									al.saveEx();
-								} else {
-									throw e;
-								}
-							} else {
-								throw e;
-							}
-						}
+						al.setTime1(newT1);
+						al.setTime2(newT2);
+						al.setTime3(newT3);
+						al.setTime4(newT4);
+						recalculateCollapsedHours(al);
+
+						al = saveAttendanceLineSafely(al, employed.getC_BPartner_ID(), parsedDate,
+								attendance, newT1, newT2, newT3, newT4);
 					} else {
 						al.setHR_Attendance_ID(attendance.get_ID());
-						if(p_HasHoursColumns) {
-							Timestamp t1 = formatTimeField(line.getTime1());
-							Timestamp t2 = formatTimeField(line.getTime2());
-							Timestamp t3 = formatTimeField(line.getTime3());
-							Timestamp t4 = formatTimeField(line.getTime4());
-							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-							if (al.getTime2()==null && t2!=null) al.setTime2(t2);
-							if (al.getTime3()==null && t3!=null) al.setTime3(t3);
-							if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+
+						if (allStoredTimesAreZeroOrNull(al) && hasAnyRealHour(newT1, newT2, newT3, newT4)) {
+							overwriteTimes(al, newT1, newT2, newT3, newT4);
 						} else {
-							Timestamp t1 = formatTimeField(parsedDateTime);
-							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+							mergeMissingTimes(al, newT1, newT2, newT3, newT4);
 						}
-						al.saveEx();
+
+						al = saveAttendanceLineSafely(al, employed.getC_BPartner_ID(), parsedDate,
+								attendance, newT1, newT2, newT3, newT4);
 					}
-					this.statusUpdate("Procesando: "+count+"/"+sortedvalueDatelist.size()+" "+employed.getValue()+" "+employed.getName()+" "+al.getAttendanceDate());
-					day=parsedDate.toString();
-					emp=line.getValue();
-					alID=al.get_ID();
-				}else {
-					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
-					if(p_HasHoursColumns) {
-					if(line.getTime1()!=null) {
-						if(i==2) {
-							time2 = formatTimeField(line.getTime2());
-							al.setTime2(time2);
-							BigDecimal QtyOfHours1=BigDecimal.ZERO;
-							if(time1!=null && time2!=null) {
-								QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+
+					time1 = al.getTime1();
+					time2 = al.getTime2();
+					time3 = al.getTime3();
+					time4 = al.getTime4();
+
+					this.statusUpdate("Procesando: " + count + "/" + sortedvalueDatelist.size() + " "
+							+ employed.getValue() + " " + employed.getName() + " " + al.getAttendanceDate());
+
+					day = parsedDate.toString();
+					emp = line.getValue();
+					alID = al.get_ID();
+				} else {
+					MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
+
+					if (p_HasHoursColumns) {
+						if (line.getTime1() != null) {
+							if (i == 2) {
+								time2 = formatTimeField(line.getTime2());
+								al.setTime2(time2);
+
+								BigDecimal QtyOfHours1 = BigDecimal.ZERO;
+								if (time1 != null && time2 != null) {
+									QtyOfHours1 = BigDecimal.valueOf((time2.getTime() - time1.getTime()) / (1000 * 60))
+											.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours1(QtyOfHours1);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
 							}
-							if(i==3) {
+							if (i == 3) {
 								time3 = formatTimeField(line.getTime3());
 								al.setTime3(time3);
 							}
-							if(i>=4) {
+							if (i >= 4) {
 								time4 = formatTimeField(line.getTime4());
 								al.setTime4(time4);
-								BigDecimal QtyOfHours2=BigDecimal.ZERO;
-								if(time3!=null && time4!=null) {
-									QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+
+								BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+								if (time3 != null && time4 != null) {
+									QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time3.getTime()) / (1000 * 60))
+											.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours2(QtyOfHours2);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
 							}
 						}
-					}
-					else {
-						if(line.getDate()!=null) {
-							if(i==2) {
+					} else {
+						if (line.getDate() != null) {
+							if (i == 2) {
 								time2 = formatTimeField(line.getDate());
 								al.setTime2(time2);
-								BigDecimal QtyOfHours1=BigDecimal.ZERO;
-								if(time1!=null && time2!=null) {
-									QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+
+								BigDecimal QtyOfHours1 = BigDecimal.ZERO;
+								if (time1 != null && time2 != null) {
+									QtyOfHours1 = BigDecimal.valueOf((time2.getTime() - time1.getTime()) / (1000 * 60))
+											.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours1(QtyOfHours1);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
 							}
-							if(i==3) {
+							if (i == 3) {
 								time3 = formatTimeField(line.getDate());
 								al.setTime3(time3);
 							}
-							if(i>=4) {
+							if (i >= 4) {
 								time4 = formatTimeField(line.getDate());
 								al.setTime4(time4);
-								BigDecimal QtyOfHours2=BigDecimal.ZERO;
-								if(time3!=null && time4!=null) {
-									QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+
+								BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+								if (time3 != null && time4 != null) {
+									QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time3.getTime()) / (1000 * 60))
+											.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours2(QtyOfHours2);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
 							}
 						}
 					}
-					al.saveEx();
-					if(count==sortedvalueDatelist.size())
+
+					al = saveAttendanceLineSafely(al, al.getC_BPartner_ID(), al.getAttendanceDate(),
+							attendance, al.getTime1(), al.getTime2(), al.getTime3(), al.getTime4());
+
+					if (count == sortedvalueDatelist.size()) {
 						checkLastAttendanceTime(al.get_ID());
+					}
 				}
+
 				i++;
-				if(i%5000==0)
+				if (i % 5000 == 0) {
 					commitEx();
+				}
 			}
-			if(usersNotFoundList.length()>0) {
-				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: "+usersNotFoundList);
+
+			if (usersNotFoundList.length() > 0) {
+				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: " + usersNotFoundList);
 				attendance.saveEx();
 			}
 
 			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-	        String dateTimeSuffix = LocalDateTime.now().format(formatter);
+			String dateTimeSuffix = LocalDateTime.now().format(formatter);
 
-			String newFileName = ATTENDANCE_FILE_LOCATION + "/procesado/" + csvFile.getName().substring(0, csvFile.getName().length() - 4);
-			newFileName = newFileName+"_"+dateTimeSuffix+".csv";
+			String newFileName = ATTENDANCE_FILE_LOCATION + "/procesado/"
+					+ csvFile.getName().substring(0, csvFile.getName().length() - 4);
+			newFileName = newFileName + "_" + dateTimeSuffix + ".csv";
 
 			File destDir = new File(ATTENDANCE_FILE_LOCATION + "/procesado/");
 			if (!destDir.exists()) {
-			    boolean dirCreated = destDir.mkdirs();
-			    if (!dirCreated) {
-			        log.severe("No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath());
-			        return "@Error@ No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath();
-			    }
+				boolean dirCreated = destDir.mkdirs();
+				if (!dirCreated) {
+					log.severe("No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath());
+					return "@Error@ No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath();
+				}
 			}
 
 			File newFile = new File(newFileName);
@@ -668,31 +768,31 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 
 			boolean moved = csvFile.renameTo(newFile);
 			if (moved) {
-			    log.info("Archivo movido exitosamente a: " + newFile.getAbsolutePath());
+				log.info("Archivo movido exitosamente a: " + newFile.getAbsolutePath());
 			} else {
-			    log.severe("Error al mover el archivo a: " + newFile.getAbsolutePath());
+				log.severe("Error al mover el archivo a: " + newFile.getAbsolutePath());
 
-			    try {
-			        Files.copy(csvFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-			        log.info("Archivo copiado exitosamente a: " + newFile.getAbsolutePath());
+				try {
+					Files.copy(csvFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+					log.info("Archivo copiado exitosamente a: " + newFile.getAbsolutePath());
 
-			        boolean deleted = csvFile.delete();
-			        if (deleted) {
-			            log.info("Archivo original eliminado después de copiar: " + csvFile.getAbsolutePath());
-			        } else {
-			            log.severe("Error al eliminar el archivo original: " + csvFile.getAbsolutePath());
-			        }
-			    } catch (IOException e) {
-			        log.severe("Error al copiar el archivo: " + e.getMessage());
-			        e.printStackTrace();
-			    }
+					boolean deleted = csvFile.delete();
+					if (deleted) {
+						log.info("Archivo original eliminado después de copiar: " + csvFile.getAbsolutePath());
+					} else {
+						log.severe("Error al eliminar el archivo original: " + csvFile.getAbsolutePath());
+					}
+				} catch (IOException e) {
+					log.severe("Error al copiar el archivo: " + e.getMessage());
+					e.printStackTrace();
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
 		return null;
 	}
-
 	protected String writeAttendanceFromServer() throws Exception{
 		ATTENDANCE_FILE_LOCATION = MSysConfig.getValue("ATTENDANCE_FILE_LOCATION", "/home/admin1/txt/", getAD_Client_ID());
 		File directory = new File(ATTENDANCE_FILE_LOCATION);
@@ -922,7 +1022,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
         }
     }
 
-	protected void checkLastAttendanceTime(int id) {
+	protected void checkLastAttendanceTime(int id) throws Exception {
 		if (id <= 0) {
 			return;
 		}
@@ -932,17 +1032,34 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			return;
 		}
 
-		if(al.getTime4()==null && al.getTime3()!=null) {
+		if (al.getTime4() == null && al.getTime3() != null) {
 			al.setTime4(al.getTime3());
 			al.setTime3(null);
-		}
-		else if(al.getTime4()==null && al.getTime3()==null && al.getTime2()!=null) {
+		} else if (al.getTime4() == null && al.getTime3() == null && al.getTime2() != null) {
 			al.setTime4(al.getTime2());
 			al.setTime2(null);
 		}
 
 		recalculateCollapsedHours(al);
-		al.saveEx();
+
+		Date parsedDate = al.getAttendanceDate();
+		if (parsedDate == null) {
+			al.saveEx();
+			return;
+		}
+
+		MHR_Attendance attendance = new MHR_Attendance(getCtx(), al.getHR_Attendance_ID(), get_TrxName());
+
+		saveAttendanceLineSafely(
+			al,
+			al.getC_BPartner_ID(),
+			parsedDate,
+			attendance,
+			al.getTime1(),
+			al.getTime2(),
+			al.getTime3(),
+			al.getTime4()
+		);
 	}
 
 	private void recalculateCollapsedHours(MHR_AttendanceLine al) {
@@ -1091,5 +1208,108 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 	        t = t.getCause();
 	    }
 	    return false;
+	}
+	
+	private boolean isZeroTime(Timestamp ts) {
+		if (ts == null) {
+			return true;
+		}
+
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(ts.getTime());
+
+		return cal.get(Calendar.HOUR_OF_DAY) == 0
+				&& cal.get(Calendar.MINUTE) == 0
+				&& cal.get(Calendar.SECOND) == 0
+				&& cal.get(Calendar.MILLISECOND) == 0;
+	}
+
+	private boolean hasAnyRealHour(Timestamp t1, Timestamp t2, Timestamp t3, Timestamp t4) {
+		return !isZeroTime(t1)
+				|| !isZeroTime(t2)
+				|| !isZeroTime(t3)
+				|| !isZeroTime(t4);
+	}
+
+	private boolean allStoredTimesAreZeroOrNull(MHR_AttendanceLine al) {
+		if (al == null) {
+			return false;
+		}
+
+		return isZeroTime(al.getTime1())
+				&& isZeroTime(al.getTime2())
+				&& isZeroTime(al.getTime3())
+				&& isZeroTime(al.getTime4());
+	}
+
+	private void overwriteTimes(MHR_AttendanceLine al, Timestamp t1, Timestamp t2, Timestamp t3, Timestamp t4) {
+		al.setTime1(t1);
+		al.setTime2(t2);
+		al.setTime3(t3);
+		al.setTime4(t4);
+		recalculateCollapsedHours(al);
+	}
+
+	private void mergeMissingTimes(MHR_AttendanceLine al, Timestamp t1, Timestamp t2, Timestamp t3, Timestamp t4) {
+		if (al == null) {
+			return;
+		}
+
+		if (al.getTime1() == null && t1 != null) {
+			al.setTime1(t1);
+		}
+		if (al.getTime2() == null && t2 != null) {
+			al.setTime2(t2);
+		}
+		if (al.getTime3() == null && t3 != null) {
+			al.setTime3(t3);
+		}
+		if (al.getTime4() == null && t4 != null) {
+			al.setTime4(t4);
+		}
+
+		recalculateCollapsedHours(al);
+	}
+
+	private MHR_AttendanceLine saveAttendanceLineSafely(MHR_AttendanceLine al, int c_BPartner_ID, Date parsedDate,
+			MHR_Attendance attendance, Timestamp newT1, Timestamp newT2, Timestamp newT3, Timestamp newT4) throws Exception {
+
+		try {
+			al.saveEx();
+			return al;
+		} catch (Exception e) {
+			if (!isUniqueViolation(e)) {
+				throw e;
+			}
+
+			MHR_AttendanceLine existing = findExistingAttendanceLine(c_BPartner_ID, parsedDate);
+			if (existing == null) {
+				throw e;
+			}
+
+			existing.setHR_Attendance_ID(attendance.get_ID());
+
+			if (allStoredTimesAreZeroOrNull(existing) && hasAnyRealHour(newT1, newT2, newT3, newT4)) {
+				overwriteTimes(existing, newT1, newT2, newT3, newT4);
+			} else {
+				mergeMissingTimes(existing, newT1, newT2, newT3, newT4);
+			}
+
+			existing.saveEx();
+			return existing;
+		}
+	}
+	private String normalizeCsvValue(String value) {
+		if (value == null) {
+			return null;
+		}
+
+		return value
+				.replace("\"", "")
+				.trim()
+				.replace("a.m.", "AM")
+				.replace("p.m.", "PM")
+				.replace("a. m.", "AM")
+				.replace("p. m.", "PM");
 	}
 }
