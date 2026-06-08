@@ -1,3 +1,27 @@
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ *                                                                     *
+ * Contributors:                                                       *
+ * - Casa del Software                                                 *
+ **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -18,11 +42,26 @@ import org.compiere.process.ProcessInfoParameter;
 import com.cdsoftware.lirion.attendance.base.CustomProcess;
 import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
 
+/**
+ * Server process to import attendance records from CSV files located in a specific 
+ * server directory. It scans the directory, processes each CSV file found, 
+ * populates the intermediate table X_I_Attendance, and moves processed files 
+ * to a "processed" subdirectory.
+ * 
+ * @author Casa del Software
+ * @version 1.0
+ */
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromFile extends CustomProcess {
 
     private String ATTENDANCE_FILE_LOCATION = "";
 
+    /**
+     * Reads the process parameters.
+     * 
+     * Parameters:
+     * - File_Directory: Absolute path to the directory containing CSV files.
+     */
     @Override
     protected void prepare() {
         // Parameter
@@ -43,6 +82,13 @@ public class ImportAttendanceFromFile extends CustomProcess {
         }
     }
 
+    /**
+     * Main execution loop. Scans the configured directory for .csv files and 
+     * invokes processFile for each.
+     * 
+     * @return summary message of the import.
+     * @throws Exception if directory access fails.
+     */
     @Override
     protected String doIt() throws Exception {
         File directory = new File(ATTENDANCE_FILE_LOCATION);
@@ -66,6 +112,13 @@ public class ImportAttendanceFromFile extends CustomProcess {
         return "Datos importados correctamente.";
     }
 
+    /**
+     * Parses a single CSV file, reading its lines and creating X_I_Attendance records.
+     * After successful processing, the file is moved to the processed directory.
+     * 
+     * @param file the CSV file to process.
+     * @throws Exception if an error occurs during parsing or database persistence.
+     */
     private void processFile(File file) throws Exception {
         String line;
         String cvsSplitBy = ",";
@@ -144,6 +197,13 @@ public class ImportAttendanceFromFile extends CustomProcess {
         }
     }
 
+    /**
+     * Combines date and time strings into a single Timestamp.
+     * 
+     * @param dateStr date string in yyyy-MM-dd format.
+     * @param timeStr time string in HH:mm:ss format.
+     * @return the resulting Timestamp or null if parsing fails.
+     */
     private Timestamp parseDate(String dateStr, String timeStr) {
         try {
             String dateTimeStr = dateStr + " " + timeStr;
@@ -156,6 +216,13 @@ public class ImportAttendanceFromFile extends CustomProcess {
         }
     }
 
+    /**
+     * Moves the processed file to a "processed" subdirectory within the 
+     * source directory.
+     * 
+     * @param file the file to move.
+     * @throws IOException if the move operation fails.
+     */
     private void moveFileToProcessedDirectory(File file) throws IOException {
         File processedDir = new File(ATTENDANCE_FILE_LOCATION + "/processed/");
         if (!processedDir.exists()) {
@@ -170,6 +237,14 @@ public class ImportAttendanceFromFile extends CustomProcess {
         log.info("Archivo movido al directorio procesado: " + processedFile.getPath());
     }
 
+    /**
+     * Generates a unique filename for the processed directory by appending 
+     * a timestamp to the original filename.
+     * 
+     * @param directory destination directory.
+     * @param fileName original filename.
+     * @return a unique filename string.
+     */
     private String getUniqueFileName(File directory, String fileName) {
         String name = fileName;
         String extension = "";

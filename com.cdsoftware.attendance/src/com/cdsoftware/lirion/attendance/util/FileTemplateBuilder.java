@@ -1,20 +1,27 @@
-/**
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Copyright (C) 2023 cdsoftware and contributors (see README.md file).
- */
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ *                                                                     *
+ * Contributors:                                                       *
+ * - Casa del Software                                                 *
+ **********************************************************************/
 
 package com.cdsoftware.lirion.attendance.util;
 
@@ -33,13 +40,10 @@ import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
 
 /**
- * This util allows you to create clean file using freemarker framework
+ * Utility class to generate formatted text files (XML, HTML, etc.) using the FreeMarker template engine.
+ * It allows injecting Java objects into templates and exporting the result as a string or to a file.
  *
- * @see <a href="https://freemarker.apache.org/">freemarker</a>
- * 
- *      Dependency: org.freemarker:freemarker:2.3.29 Example: String file =
- *      FileTemplateBuilder.builder().template("template").inject("invoice", new
- *      Invoice()).export("text.xml");
+ * @see <a href="https://freemarker.apache.org/">FreeMarker Documentation</a>
  */
 public class FileTemplateBuilder {
 

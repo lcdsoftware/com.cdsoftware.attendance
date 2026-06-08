@@ -1,3 +1,27 @@
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ *                                                                     *
+ * Contributors:                                                       *
+ * - Casa del Software                                                 *
+ **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.math.BigDecimal;
@@ -17,27 +41,35 @@ import org.compiere.process.SvrProcess;
 import com.cdsoftware.lirion.attendance.model.MGH_Shifts;
 import com.cdsoftware.lirion.attendance.model.MGH_ShiftsLine;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
+import com.cdsoftware.lirion.attendance.base.CustomProcess;
 import com.cdsoftware.lirion.payroll.model.MHRAttribute;
 import com.cdsoftware.lirion.payroll.model.MHRConcept;
 import com.cdsoftware.lirion.payroll.model.MHRPeriod;
 import com.cdsoftware.lirion.payroll.model.MHRProcess;
 
+/**
+ * Server process to calculate extra hours based on attendance records and assigned shifts.
+ * It identifies diurnal, nocturnal, Sunday, and rest day extra hours, then 
+ * inserts them as payroll attributes (MHRAttribute) for processing in payroll.
+ * 
+ * Identification strategy:
+ * - Compares marking times (Time1, Time2) against the employee's shift boundaries.
+ * - Uses a hardcoded diurnal limit (usually 18:00) to split extra hours.
+ * - Triggers different payroll concepts based on the day type (working day, Sunday, rest day).
+ * 
+ * @author Casa del Software
+ */
 @org.adempiere.base.annotation.Process
 public class CalculateExtraHour extends SvrProcess{
 
-	
-	
 	private int C_BPartner_ID;
 	private Timestamp p_AttendanceDate;
 	private Timestamp p_AttendanceDate2;
 	private Timestamp p_Time1;
 	private Timestamp p_Time2;
 	
-	
 	private int HR_Process_ID;
 	private int HR_Attendance_ID;
-	
-	
 	
 	private static int PA_A_HORAS_EXTRAS_DIURNAS = 0;
 	private static int PA_A_NOV_HORAS_EXTRAS_EXT_DIURNAS= 0;
@@ -51,9 +83,22 @@ public class CalculateExtraHour extends SvrProcess{
 	private static int PA_A_NOV_HORAS_EXTRAS_DIURNAS_DOM = 0;
 	private static int PA_A_HORAS_EXTRAS_NOCT_DOM = 0;
 	private static int PA_A_HORAS_DOMINGO_TRABAJADAS = 0;
+
+	/**
+	 * Reads the process parameters required for extra hour calculation and 
+	 * resolves the necessary payroll concept IDs.
+	 * 
+	 * Parameters:
+	 * - AttendanceDate: The date for which extra hours are being calculated.
+	 * - AttendanceDate2: The end date for the calculation (used for cross-day shifts).
+	 * - C_BPartner_ID: The employee (Business Partner) record.
+	 * - Time1: The clock-in time marking.
+	 * - Time2: The clock-out time marking.
+	 * - HR_Process_ID: The target payroll process ID where attributes will be created.
+	 * - HR_Attendance_ID: The source attendance header record ID.
+	 */
 	@Override
 	protected void prepare() {
-		// TODO Auto-generated method stub
 		ProcessInfoParameter[] parameters = getParameter();
 		for (ProcessInfoParameter para: parameters)
 		{
@@ -95,33 +140,37 @@ public class CalculateExtraHour extends SvrProcess{
 		PA_A_HORAS_DOMINGO_TRABAJADAS = MHRConcept.getByValue(getCtx(), "PA_A_HORAS_DOMINGO_TRABAJADAS",get_TrxName()).getHR_Concept_ID();
 	}
 
+	/**
+	 * Executes the logic to calculate and distribute extra hours.
+	 * 
+	 * Logic Flow:
+	 * 1. Identifies the employee's shift (GH_Shifts_ID).
+	 * 2. Retrieves shift configuration for the specific day of the week.
+	 * 3. Handles rest day / Sunday logic (full hours as special concepts).
+	 * 4. For working days:
+	 *    - Splits worked hours into diurnal (before 18:00) and nocturnal (after 18:00).
+	 *    - Caps extra hours at a standard limit (3 hours / 180 mins) and assigns 
+	 *      remaining time to "extended" extra hour concepts.
+	 * 5. Persists results as MHRAttribute records.
+	 * 
+	 * @return "Ok" string on success.
+	 * @throws Exception if shifts configuration is missing for the day.
+	 */
 	@Override
 	protected String doIt() throws Exception {
-		// TODO Auto-generated method stub
-		
-		
 		MBPartner bpartner = new MBPartner(getCtx(), C_BPartner_ID, get_TrxName());
 		int p_GH_Shifts_ID = bpartner.get_ValueAsInt("GH_Shifts_ID");
 		
 		if(p_GH_Shifts_ID == 0) {
-			p_GH_Shifts_ID = 1000000; //crear el check de predeterminado en el turno para que no este fijo
+			p_GH_Shifts_ID = 1000000; // TODO: Implement a 'default' checkbox in shifts to avoid hardcoding this ID
 			
 		}
 		MGH_Shifts shift = new MGH_Shifts(getCtx(), p_GH_Shifts_ID , get_TrxName());
 				
-		//obtenemos cantidad de dias a evaluar
+		// Get the number of days to evaluate
 		LocalDateTime attendanceDate = p_AttendanceDate.toLocalDateTime();
 		
 		LocalDateTime maxDiurnalTime = attendanceDate.withHour(18);
-		
-		
-		
-		
-		
-		
-		
-		
-			//return "Error en la fecha: No se puede calcular horas extras en un dia de descanso";
 		
 		MGH_ShiftsLine shiftsLine = GetShiftLineByDayOfWeek(attendanceDate.getDayOfWeek(),shift);
 		
@@ -160,7 +209,7 @@ public class CalculateExtraHour extends SvrProcess{
 				insertExtraHour(C_BPartner_ID,BigDecimal.valueOf(extraMinutes/60.0<=8.0?extraMinutes/60.0:8.0),PA_A_HORAS_DESCANSO_LABORADO,
 						new MHRProcess(getCtx(), HR_Process_ID, get_TrxName()),"Fecha: "+ time1WithDay.toString() );
 			}
-			//return "Ok";
+			// return "Ok";
 		}
 		
 		
@@ -253,8 +302,14 @@ public class CalculateExtraHour extends SvrProcess{
 		return "Ok";
 	}
 
+	/**
+	 * Checks if a specific day is configured as a rest day in the given shift.
+	 * 
+	 * @param dayOfWeek day to check
+	 * @param shift shift configuration
+	 * @return true if it is a rest day
+	 */
 	private boolean isRestDay(DayOfWeek dayOfWeek,MGH_Shifts shift) {
-		// TODO Auto-generated method stub
 		List<MGH_ShiftsLine> sl = new Query(getCtx(), MGH_ShiftsLine.Table_Name, "RestDay='Y' AND GH_Shifts_ID="+shift.get_ID(), get_TrxName()).list();
 		
 		for(MGH_ShiftsLine sline : sl){
@@ -264,16 +319,27 @@ public class CalculateExtraHour extends SvrProcess{
 		}
 		return false;
 	}
+
+	/**
+	 * Retrieves the shift line configuration for a specific day of the week.
+	 * 
+	 * @param dayOfWeek day to look for
+	 * @param pShift shift configuration
+	 * @return the corresponding shift line
+	 */
 	private MGH_ShiftsLine GetShiftLineByDayOfWeek(DayOfWeek dayOfWeek, MGH_Shifts pShift) {
-		// TODO Auto-generated method stub
 		MGH_ShiftsLine sl = new Query(getCtx(), MGH_ShiftsLine.Table_Name, "GH_Shifts_ID=? AND WeekDay=?", get_TrxName()).setParameters(pShift.get_ID(),String.valueOf(dayOfWeek.getValue())).first();
 		
 		return sl;
 	}
 	
-
+	/**
+	 * Calculates the difference between expected shift hours and actual attendance hours.
+	 * 
+	 * @param attendanceline attendance line to evaluate
+	 * @return the difference in hours, accounting for tolerance
+	 */
 	protected BigDecimal getDifference(MHR_AttendanceLine attendanceline) {
-		// TODO Auto-generated method stub
 		String WeekDay = attendanceline.getWeekDay();
 		if (WeekDay.equals(null))
 			return BigDecimal.ZERO;
@@ -284,9 +350,16 @@ public class CalculateExtraHour extends SvrProcess{
 		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
 	}
 
-	
+	/**
+	 * Inserts a calculated extra hour amount into the payroll attributes (MHRAttribute).
+	 * 
+	 * @param C_BPartner_ID employee ID
+	 * @param extraHour amount of hours
+	 * @param concept_id payroll concept ID
+	 * @param payrollProcess active payroll process
+	 * @param Description description for the attribute
+	 */
 	protected void insertExtraHour(int C_BPartner_ID, BigDecimal extraHour,int concept_id,MHRProcess payrollProcess,String Description) {
-		// TODO Auto-generated method stub
 		MBPartner employed = new MBPartner(getCtx(),C_BPartner_ID , get_TrxName());
 		if(!employed.isActive() || extraHour.compareTo(BigDecimal.ZERO)<=0)
 			return;
