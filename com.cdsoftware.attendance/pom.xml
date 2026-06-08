@@ -65,4 +65,11 @@
 			</plugin>
 		</plugins>
 	</build>
+	<dependencies>
+		<dependency>
+			<groupId>org.idempiere</groupId>
+			<artifactId>com.ghintech.idempierePayroll</artifactId>
+			<version>12.0.0-SNAPSHOT</version>
+		</dependency>
+	</dependencies>
 </project>
