@@ -1,3 +1,24 @@
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -41,26 +62,43 @@ import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 
 /**
- * estructura del csv
- * [bpIndex]  Codigo de Empleado: Primer no nulo de (HR_ClockCode,taxid,value)
- * [dateIndex] fecha marcacion
- * [2]        Hora Entrada (opcional)
- * [3]        Hora Salida Almuerzo (opcional)
- * [4]        Hora regreso Almuerzo (opcional)
- * [5]        Hora Salida (opcional)
- * [6]
- * @author alara
- *
+ * Server process to import attendance markings from a CSV file.
+ * The file can be retrieved from an attachment on the current record or 
+ * from a configured server directory.
+ * 
+ * Business Logic:
+ * - Parses CSV files with configurable delimiters and indices.
+ * - Identifies Business Partners by matching Employee Code against HR_ClockCode, taxid, or value.
+ * - Creates or updates HR_AttendanceLine records.
+ * - Handles duplicate markings within a configurable time block.
+ * - Calculates hours for markings when column-based format is used.
+ * - Moves processed files to a 'procesado' subdirectory when importing from server.
+ * 
+ * @author Ángel Lara
+ * @version 1.1
  */
-
 @org.adempiere.base.annotation.Process
-public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
+public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
+	
+	/** List of employees not found in the system */
 	StringBuilder usersNotFoundList = new StringBuilder();
+	
+	/** Date time format for parsing */
 	String p_DateTimeFormat = null;
+	
+	/** CSV format type (Comma or Tab separated) */
 	String p_FormatType = "";
+	
+	/** Whether the CSV has a header row */
 	boolean p_HasHeader = false;
+	
+	/** Record ID being processed */
 	private int RECORD_ID;
-	private String ATTENDANCE_FILE_LOCATION="";
+	
+	/** Server location for attendance files */
+	private String ATTENDANCE_FILE_LOCATION = "";
+	
+	/** CSV Column indices */
 	private int bpIndex = 0;
 	private int dateIndex = 1;
 	private int Hour1Index = 2;
@@ -68,16 +106,31 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 	private int Hour3Index = 4;
 	private int Hour4Index = 5;
 
+	/** Whether the CSV has specific hour columns */
 	private boolean p_HasHoursColumns = false;
 
 	private static final int DEFAULT_ATTENDANCE_TIME_BLOCK_MINUTES = 1;
 	private static final String ATTENDANCE_TIME_BLOCK_SYSCONFIG = "CDS_AttendanceTimeBlock";
 
+	/**
+	 * Reads process parameters from the iDempiere Application Dictionary.
+	 * 
+	 * Parameters:
+	 * - DateTimeFormat: Format string for parsing dates and times (e.g., "yyyy-MM-dd HH:mm:ss").
+	 * - FormatType: CSV delimiter type (C=Comma, T=Tab).
+	 * - HasHeader: Whether the first line of the CSV contains column headers.
+	 * - bpIndex: 0-based column index for the Business Partner identifier.
+	 * - dateIndex: 0-based column index for the marking date/time.
+	 * - HasHoursColumns: If true, the CSV contains specific columns for multiple marking times.
+	 * - Hour1Index: Column index for the first marking time.
+	 * - Hour2Index: Column index for the second marking time.
+	 * - Hour3Index: Column index for the third marking time.
+	 * - Hour4Index: Column index for the fourth marking time.
+	 */
 	@Override
 	protected void prepare() {
 		ProcessInfoParameter[] parameters = getParameter();
-		for (ProcessInfoParameter para: parameters)
-		{
+		for (ProcessInfoParameter para : parameters) {
 			String name = para.getParameterName();
 			if (para.getParameter() == null)
 				;
@@ -105,19 +158,33 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		RECORD_ID = getRecord_ID();
 	}
 
+	/**
+	 * Main execution logic. Routes to either attachment-based or server-based
+	 * import depending on the record context.
+	 * 
+	 * @return summary message of the process execution.
+	 * @throws Exception if any error occurs during processing.
+	 */
 	@Override
 	protected String doIt() throws Exception {
-		if(RECORD_ID>0 && this.getTable_ID()==MHR_Attendance.Table_ID)
+		if (RECORD_ID > 0 && this.getTable_ID() == MHR_Attendance.Table_ID)
 			return writeAttendance();
 		else
 			return writeAttendanceFromServer();
 	}
 
-	protected String writeAttendance() throws Exception{
-
-		Timestamp time1=null,time2=null,time3=null,time4=null;
-		String day = "",emp = "";
-		int alID = 0,i = 1;
+	/**
+	 * Imports attendance data from the first file attached to the current MHR_Attendance record.
+	 * Validates the attachment presence and parses the CSV content.
+	 * 
+	 * @return @Error@ if no attachment is found, otherwise null (process result handled by parent).
+	 * @throws Exception if parsing or saving records fails.
+	 */
+	protected String writeAttendance() throws Exception {
+		Timestamp time1 = null, time2 = null, time3 = null, time4 = null;
+		String day = "", emp = "";
+		int alID = 0, i = 1;
+		
 		MHR_Attendance attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
 		MAttachment attachment = attendance.getAttachment();
 		if (attachment == null) {
@@ -134,55 +201,55 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		} else if (p_FormatType.equals(X_AD_ImpFormat.FORMATTYPE_TabSeparated)) {
 			delimiter = "\t";
 		} else {
-			throw new IllegalArgumentException ("separador no Valido: " + p_FormatType);
+			throw new IllegalArgumentException("separador no Valido: " + p_FormatType);
 		}
 
 		File csvFile = entry.getFile();
 		FileReader fileReader = new FileReader(csvFile);
 
 		try (BufferedReader br = new BufferedReader(fileReader)) {
-			int countlines=0;
+			int countlines = 0;
 			SimpleDateFormat dateTimeFormat = new SimpleDateFormat(p_DateTimeFormat, Locale.US);
 			String inputLine;
 			ArrayList<attendanceCsvLine> valueDatelist = new ArrayList<>();
 
 			Comparator<attendanceCsvLine> compareByName = Comparator
-                    .comparing(attendanceCsvLine::getValue)
-                    .thenComparing(attendanceCsvLine::getDate);
+					.comparing(attendanceCsvLine::getValue)
+					.thenComparing(attendanceCsvLine::getDate);
 
 			while ((inputLine = br.readLine()) != null) {
-				if(countlines==0 && p_HasHeader) {
+				if (countlines == 0 && p_HasHeader) {
 					countlines++;
 					continue;
 				}
 				if (inputLine.isEmpty() || inputLine.startsWith(String.valueOf(delimiter))) {
-				    continue;
+					continue;
 				}
 
 				String[] csvLine = inputLine.split(String.valueOf(delimiter));
-				if(csvLine.length<=1)
-					throw new IllegalArgumentException ("Separador incorrecto: '" + delimiter+"'");
+				if (csvLine.length <= 1)
+					throw new IllegalArgumentException("Separador incorrecto: '" + delimiter + "'");
 
 				String formattedDate = csvLine[dateIndex]
-					    .replace("a.m.", "AM").replace("p.m.", "PM")
-					    .replace("a. m.", "AM").replace("p. m.", "PM");
+						.replace("a.m.", "AM").replace("p.m.", "PM")
+						.replace("a. m.", "AM").replace("p. m.", "PM");
 
 				Date parsedDateTime = dateTimeFormat.parse(formattedDate);
-				String bpCode=csvLine[bpIndex].trim();
-				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode,parsedDateTime);
+				String bpCode = csvLine[bpIndex].trim();
+				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode, parsedDateTime);
 
-				if(p_HasHoursColumns) {
+				if (p_HasHoursColumns) {
 					SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm", Locale.US);
 					int[] hourIndexes = {Hour1Index, Hour2Index, Hour3Index, Hour4Index};
-				    Date[] parsedDateTimes = new Date[4];
-				    for (int j = 0; j < hourIndexes.length; j++) {
-				    	 int index = hourIndexes[i];
-				         if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
-				             parsedDateTimes[i] = formatTime.parse(csvLine[index]
-				            		 .replace("a.m.", "AM").replace("p.m.", "PM")
-									 .replace("a. m.", "AM").replace("p. m.", "PM"));
-				         }
-				     }
+					Date[] parsedDateTimes = new Date[4];
+					for (int j = 0; j < hourIndexes.length; j++) {
+						int index = hourIndexes[j];
+						if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
+							parsedDateTimes[j] = formatTime.parse(csvLine[index]
+									.replace("a.m.", "AM").replace("p.m.", "PM")
+									.replace("a. m.", "AM").replace("p. m.", "PM"));
+						}
+					}
 					atcsvLine.setTime1(formatTimeField(parsedDateTimes[0]));
 					atcsvLine.setTime2(formatTimeField(parsedDateTimes[1]));
 					atcsvLine.setTime3(formatTimeField(parsedDateTimes[2]));
@@ -194,28 +261,28 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			}
 			fileReader.close();
 
-		    List<attendanceCsvLine> sortedvalueDatelist = valueDatelist.stream()
-                    .sorted(compareByName)
-                    .collect(Collectors.toList());
+			List<attendanceCsvLine> sortedvalueDatelist = valueDatelist.stream()
+					.sorted(compareByName)
+					.collect(Collectors.toList());
 
-		    sortedvalueDatelist = filterNearbyMarkings(sortedvalueDatelist, dateTimeFormat);
+			sortedvalueDatelist = filterNearbyMarkings(sortedvalueDatelist, dateTimeFormat);
 
 			String lastnotfoundbp = "";
 			int count = 0;
 			for (attendanceCsvLine line : sortedvalueDatelist) {
 				count++;
-				if(line.getValue() == null || line.getValue().trim().length() == 0) {
-				    log.warning("Linea ignorada por codigo de empleado vacio");
-				    continue;
+				if (line.getValue() == null || line.getValue().trim().length() == 0) {
+					log.warning("Linea ignorada por codigo de empleado vacio");
+					continue;
 				};
 
-				Date parsedDateTime,parsedDate;
+				Date parsedDateTime, parsedDate;
 				parsedDateTime = line.getDate();
 				parsedDate = extraerFecha(parsedDateTime, dateTimeFormat);
 
-				if(day.compareTo(parsedDate.toString())!=0 || emp.compareTo(line.getValue().trim())!=0) {
+				if (day.compareTo(parsedDate.toString()) != 0 || emp.compareTo(line.getValue().trim()) != 0) {
 					checkLastAttendanceTime(alID);
-					i=1;
+					i = 1;
 
 					StringBuilder whereclause = new StringBuilder();
 					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
@@ -224,11 +291,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 							whereclause.toString(), get_TrxName()).setParameters(line.getValue())
 							.setClient_ID()
 							.first();
-					if(employed==null) {
-						if(lastnotfoundbp.compareTo(line.getValue())!=0) {
-							lastnotfoundbp=line.getValue();
-							usersNotFoundList.append(line.getValue()+",");
-							log.warning("No se encuentra el empleado "+line.getValue());
+					
+					if (employed == null) {
+						if (lastnotfoundbp.compareTo(line.getValue()) != 0) {
+							lastnotfoundbp = line.getValue();
+							usersNotFoundList.append(line.getValue() + ",");
+							log.warning("No se encuentra el empleado " + line.getValue());
 						}
 						continue;
 					}
@@ -240,7 +308,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 						al.setC_BPartner_ID(employed.getC_BPartner_ID());
 						al.setWeekDay(getWeekDayValue(parsedDate));
 						al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
-						if(p_HasHoursColumns) {
+						if (p_HasHoursColumns) {
 							time1 = formatTimeField(line.getTime1());
 							al.setTime1(time1);
 							time2 = formatTimeField(line.getTime2());
@@ -249,8 +317,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 							al.setTime3(time3);
 							time4 = formatTimeField(line.getTime4());
 							al.setTime4(time4);
-						}
-						else {
+						} else {
 							time1 = formatTimeField(parsedDateTime);
 							al.setTime1(time1);
 						}
@@ -267,13 +334,13 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 										Timestamp t2 = formatTimeField(line.getTime2());
 										Timestamp t3 = formatTimeField(line.getTime3());
 										Timestamp t4 = formatTimeField(line.getTime4());
-										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-										if (al.getTime2()==null && t2!=null) al.setTime2(t2);
-										if (al.getTime3()==null && t3!=null) al.setTime3(t3);
-										if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+										if (al.getTime1() == null && t1 != null) al.setTime1(t1);
+										if (al.getTime2() == null && t2 != null) al.setTime2(t2);
+										if (al.getTime3() == null && t3 != null) al.setTime3(t3);
+										if (al.getTime4() == null && t4 != null) al.setTime4(t4);
 									} else {
 										Timestamp t1 = formatTimeField(parsedDateTime);
-										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+										if (al.getTime1() == null && t1 != null) al.setTime1(t1);
 									}
 									al.saveEx();
 								} else {
@@ -285,78 +352,77 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 						}
 					} else {
 						al.setHR_Attendance_ID(attendance.get_ID());
-						if(p_HasHoursColumns) {
+						if (p_HasHoursColumns) {
 							Timestamp t1 = formatTimeField(line.getTime1());
 							Timestamp t2 = formatTimeField(line.getTime2());
 							Timestamp t3 = formatTimeField(line.getTime3());
 							Timestamp t4 = formatTimeField(line.getTime4());
-							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-							if (al.getTime2()==null && t2!=null) al.setTime2(t2);
-							if (al.getTime3()==null && t3!=null) al.setTime3(t3);
-							if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+							if (al.getTime1() == null && t1 != null) al.setTime1(t1);
+							if (al.getTime2() == null && t2 != null) al.setTime2(t2);
+							if (al.getTime3() == null && t3 != null) al.setTime3(t3);
+							if (al.getTime4() == null && t4 != null) al.setTime4(t4);
 						} else {
 							Timestamp t1 = formatTimeField(parsedDateTime);
-							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+							if (al.getTime1() == null && t1 != null) al.setTime1(t1);
 						}
 						al.saveEx();
 					}
 
-					this.statusUpdate("Procesando: "+count+"/"+sortedvalueDatelist.size()+" "+employed.getValue()+" "+employed.getName()+" "+parsedDateTime);
-					day=parsedDate.toString();
-					emp=line.getValue();
-					alID=al.get_ID();
-				}else {
-					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
-					if(p_HasHoursColumns) {
-						if(line.getTime1()!=null) {
-							if(i==2) {
+					this.statusUpdate("Procesando: " + count + "/" + sortedvalueDatelist.size() + " " + employed.getValue() + " " + employed.getName() + " " + parsedDateTime);
+					day = parsedDate.toString();
+					emp = line.getValue();
+					alID = al.get_ID();
+				} else {
+					MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
+					if (p_HasHoursColumns) {
+						if (line.getTime1() != null) {
+							if (i == 2) {
 								time2 = formatTimeField(line.getTime2());
 								al.setTime2(time2);
-								BigDecimal QtyOfHours1=BigDecimal.ZERO;
-								if(time1!=null && time2!=null) {
-									QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+								BigDecimal QtyOfHours1 = BigDecimal.ZERO;
+								if (time1 != null && time2 != null) {
+									QtyOfHours1 = BigDecimal.valueOf((time2.getTime() - time1.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours1(QtyOfHours1);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
 							}
-							if(i==3) {
+							if (i == 3) {
 								time3 = formatTimeField(line.getTime3());
 								al.setTime3(time3);
 							}
-							if(i>=4) {
+							if (i >= 4) {
 								time4 = formatTimeField(line.getTime4());
 								al.setTime4(time4);
-								BigDecimal QtyOfHours2=BigDecimal.ZERO;
-								if(time3!=null && time4!=null) {
-									QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+								BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+								if (time3 != null && time4 != null) {
+									QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time3.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours2(QtyOfHours2);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
 							}
 						}
-					}
-					else {
-						if(line.getDate()!=null) {
-							if(i==2) {
+					} else {
+						if (line.getDate() != null) {
+							if (i == 2) {
 								time2 = formatTimeField(line.getDate());
 								al.setTime2(time2);
-								BigDecimal QtyOfHours1=BigDecimal.ZERO;
-								if(time1!=null && time2!=null) {
-									QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+								BigDecimal QtyOfHours1 = BigDecimal.ZERO;
+								if (time1 != null && time2 != null) {
+									QtyOfHours1 = BigDecimal.valueOf((time2.getTime() - time1.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours1(QtyOfHours1);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
 							}
-							if(i==3) {
+							if (i == 3) {
 								time3 = formatTimeField(line.getDate());
 								al.setTime3(time3);
 							}
-							if(i>=4) {
+							if (i >= 4) {
 								time4 = formatTimeField(line.getDate());
 								al.setTime4(time4);
-								BigDecimal QtyOfHours2=BigDecimal.ZERO;
-								if(time3!=null && time4!=null) {
-									QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+								BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+								if (time3 != null && time4 != null) {
+									QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time3.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours2(QtyOfHours2);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
@@ -364,15 +430,15 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 						}
 					}
 					al.saveEx();
-					if(count==sortedvalueDatelist.size())
+					if (count == sortedvalueDatelist.size())
 						checkLastAttendanceTime(al.get_ID());
 				}
 				i++;
-				if(i%5000==0)
+				if (i % 5000 == 0)
 					commitEx();
 			}
-			if(usersNotFoundList.length()>0) {
-				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: "+usersNotFoundList);
+			if (usersNotFoundList.length() > 0) {
+				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: " + usersNotFoundList);
 				attendance.saveEx();
 			}
 		} catch (IOException e) {
@@ -381,19 +447,26 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		return null;
 	}
 
-	protected String writeAttendance(String pathName) throws Exception{
-
-		Timestamp time1=null,time2=null,time3=null,time4=null;
-		String day = "",emp = "";
-		int alID = 0,i = 1;
+	/**
+	 * Scans the server directory defined by the MSysConfig ATTENDANCE_FILE_LOCATION
+	 * and processes all files found within it.
+	 * 
+	 * @return Summary message indicating the process finished.
+	 * @throws Exception if directory access fails.
+	 */
+	protected String writeAttendanceFromServer() throws Exception {
+		Timestamp time1 = null, time2 = null, time3 = null, time4 = null;
+		String day = "", emp = "";
+		int alID = 0, i = 1;
 
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
-		StringBuilder sql = new StringBuilder ("DELETE FROM HR_AttendanceLine ")
-				.append("WHERE HR_Attendance_ID=").append(RECORD_ID).append (clientCheck);
-		int	no = DB.executeUpdate(sql.toString(), get_TrxName());
+		StringBuilder sql = new StringBuilder("DELETE FROM HR_AttendanceLine ")
+				.append("WHERE HR_Attendance_ID=").append(RECORD_ID).append(clientCheck);
+		int no = DB.executeUpdate(sql.toString(), get_TrxName());
 		if (log.isLoggable(Level.FINE)) log.fine("Delete Attendance =" + no);
+		
 		MHR_Attendance attendance;
-		if(RECORD_ID >0)
+		if (RECORD_ID > 0)
 			attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
 		else
 			attendance = new MHR_Attendance(getCtx(), 0, get_TrxName());
@@ -404,41 +477,41 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		} else if (p_FormatType.equals(X_AD_ImpFormat.FORMATTYPE_TabSeparated)) {
 			delimiter = "\t";
 		} else {
-			throw new IllegalArgumentException ("separador no Valido: " + p_FormatType);
+			throw new IllegalArgumentException("separador no Valido: " + p_FormatType);
 		}
 
-		File csvFile = new File (pathName);
+		File csvFile = new File(pathName);
 		FileReader fileReader = new FileReader(csvFile);
 
 		try (BufferedReader br = new BufferedReader(fileReader)) {
-			int countlines=0;
+			int countlines = 0;
 			SimpleDateFormat dateTimeFormat = new SimpleDateFormat(p_DateTimeFormat, Locale.US);
 			String inputLine;
 			ArrayList<attendanceCsvLine> valueDatelist = new ArrayList<>();
 			Date firstDate = null;
 
 			Comparator<attendanceCsvLine> compareByName = Comparator
-                    .comparing(attendanceCsvLine::getValue)
-                    .thenComparing(attendanceCsvLine::getDate);
+					.comparing(attendanceCsvLine::getValue)
+					.thenComparing(attendanceCsvLine::getDate);
 
 			attendance.setName(new Timestamp(System.currentTimeMillis()).toString());
 			attendance.saveEx();
 
 			while ((inputLine = br.readLine()) != null) {
-				if(countlines==0 && p_HasHeader) {
+				if (countlines == 0 && p_HasHeader) {
 					countlines++;
 					continue;
 				}
 				if (inputLine.isEmpty() || inputLine.startsWith(String.valueOf(delimiter))) {
-				    continue;
+					continue;
 				}
 
 				String[] csvLine = inputLine.split(String.valueOf(delimiter));
-				if(csvLine.length<=1)
-					throw new IllegalArgumentException ("Separador incorrecto: '" + delimiter+"'");
+				if (csvLine.length <= 1)
+					throw new IllegalArgumentException("Separador incorrecto: '" + delimiter + "'");
 				String formattedDate = csvLine[dateIndex]
-					    .replace("a.m.", "AM").replace("p.m.", "PM")
-					    .replace("a. m.", "AM").replace("p. m.", "PM");
+						.replace("a.m.", "AM").replace("p.m.", "PM")
+						.replace("a. m.", "AM").replace("p. m.", "PM");
 				formattedDate = formattedDate.replace("\"", "");
 
 				Date parsedDateTime = dateTimeFormat.parse(formattedDate);
@@ -446,19 +519,20 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 
 				String bpCode = csvLine[bpIndex];
 				bpCode = bpCode.replace("\"", "").trim();
-				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode,parsedDateTime);
-				if(p_HasHoursColumns) {
+				attendanceCsvLine atcsvLine = new attendanceCsvLine(bpCode, parsedDateTime);
+				
+				if (p_HasHoursColumns) {
 					SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm", Locale.US);
 					int[] hourIndexes = {Hour1Index, Hour2Index, Hour3Index, Hour4Index};
-				    Date[] parsedDateTimes = new Date[4];
-				    for (int j = 0; j < hourIndexes.length; j++) {
-				    	 int index = hourIndexes[i];
-				         if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
-				             parsedDateTimes[i] = formatTime.parse(csvLine[index]
-				            		 .replace("a.m.", "AM").replace("p.m.", "PM")
-									 .replace("a. m.", "AM").replace("p. m.", "PM").replace("\"", ""));
-				         }
-				     }
+					Date[] parsedDateTimes = new Date[4];
+					for (int j = 0; j < hourIndexes.length; j++) {
+						int index = hourIndexes[j]; 
+						if (csvLine.length > index && csvLine[index] != null && !csvLine[index].isEmpty()) {
+							parsedDateTimes[j] = formatTime.parse(csvLine[index]
+									.replace("a.m.", "AM").replace("p.m.", "PM")
+									.replace("a. m.", "AM").replace("p. m.", "PM").replace("\"", ""));
+						}
+					}
 					atcsvLine.setTime1(formatTimeField(parsedDateTimes[0]));
 					atcsvLine.setTime2(formatTimeField(parsedDateTimes[1]));
 					atcsvLine.setTime3(formatTimeField(parsedDateTimes[2]));
@@ -469,26 +543,26 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			}
 			fileReader.close();
 
-		    List<attendanceCsvLine> sortedvalueDatelist = valueDatelist.stream()
-                    .sorted(compareByName)
-                    .collect(Collectors.toList());
+			List<attendanceCsvLine> sortedvalueDatelist = valueDatelist.stream()
+					.sorted(compareByName)
+					.collect(Collectors.toList());
 
-		    sortedvalueDatelist = filterNearbyMarkings(sortedvalueDatelist, dateTimeFormat);
+			sortedvalueDatelist = filterNearbyMarkings(sortedvalueDatelist, dateTimeFormat);
 
 			String lastnotfoundbp = "";
 			int count = 0;
 			for (attendanceCsvLine line : sortedvalueDatelist) {
 				count++;
-				if(line.getValue() == null || line.getValue().trim().length() == 0) {
-				    log.warning("Linea ignorada por codigo de empleado vacio");
-				    continue;
+				if (line.getValue() == null || line.getValue().trim().length() == 0) {
+					log.warning("Linea ignorada por codigo de empleado vacio");
+					continue;
 				}
-				Date parsedDateTime,parsedDate;
+				Date parsedDateTime, parsedDate;
 				parsedDateTime = line.getDate();
 				parsedDate = extraerFecha(parsedDateTime, dateTimeFormat);
-				if(day.compareTo(parsedDate.toString())!=0 || emp.compareTo(line.getValue().trim())!=0) {
+				if (day.compareTo(parsedDate.toString()) != 0 || emp.compareTo(line.getValue().trim()) != 0) {
 					checkLastAttendanceTime(alID);
-					i=1;
+					i = 1;
 
 					StringBuilder whereclause = new StringBuilder();
 					whereclause.append("REPLACE (trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE (trim(?), '-', '')");
@@ -497,11 +571,11 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 							whereclause.toString(), get_TrxName()).setParameters(line.getValue())
 							.setClient_ID()
 							.first();
-					if(employed==null) {
-						if(lastnotfoundbp.compareTo(line.getValue())!=0) {
-							lastnotfoundbp=line.getValue();
-							usersNotFoundList.append(line.getValue()+",");
-							log.warning("No se encuentra el empleado "+line.getValue());
+					if (employed == null) {
+						if (lastnotfoundbp.compareTo(line.getValue()) != 0) {
+							lastnotfoundbp = line.getValue();
+							usersNotFoundList.append(line.getValue() + ",");
+							log.warning("No se encuentra el empleado " + line.getValue());
 						}
 						continue;
 					}
@@ -513,7 +587,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 						al.setC_BPartner_ID(employed.getC_BPartner_ID());
 						al.setWeekDay(getWeekDayValue(parsedDate));
 						al.setAttendanceDate(new Timestamp(parsedDate.getTime()));
-						if(p_HasHoursColumns) {
+						if (p_HasHoursColumns) {
 							time1 = formatTimeField(line.getTime1());
 							al.setTime1(time1);
 							time2 = formatTimeField(line.getTime2());
@@ -522,8 +596,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 							al.setTime3(time3);
 							time4 = formatTimeField(line.getTime4());
 							al.setTime4(time4);
-						}
-						else {
+						} else {
 							time1 = formatTimeField(parsedDateTime);
 							al.setTime1(time1);
 						}
@@ -533,20 +606,20 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 							if (isUniqueViolation(e)) {
 								MHR_AttendanceLine existing = findExistingAttendanceLine(employed.getC_BPartner_ID(), parsedDate);
 								if (existing != null) {
-                                    al = existing;
+									al = existing;
 									al.setHR_Attendance_ID(attendance.get_ID());
 									if (p_HasHoursColumns) {
 										Timestamp t1 = formatTimeField(line.getTime1());
 										Timestamp t2 = formatTimeField(line.getTime2());
 										Timestamp t3 = formatTimeField(line.getTime3());
 										Timestamp t4 = formatTimeField(line.getTime4());
-										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-										if (al.getTime2()==null && t2!=null) al.setTime2(t2);
-										if (al.getTime3()==null && t3!=null) al.setTime3(t3);
-										if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+										if (al.getTime1() == null && t1 != null) al.setTime1(t1);
+										if (al.getTime2() == null && t2 != null) al.setTime2(t2);
+										if (al.getTime3() == null && t3 != null) al.setTime3(t3);
+										if (al.getTime4() == null && t4 != null) al.setTime4(t4);
 									} else {
 										Timestamp t1 = formatTimeField(parsedDateTime);
-										if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+										if (al.getTime1() == null && t1 != null) al.setTime1(t1);
 									}
 									al.saveEx();
 								} else {
@@ -558,77 +631,76 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 						}
 					} else {
 						al.setHR_Attendance_ID(attendance.get_ID());
-						if(p_HasHoursColumns) {
+						if (p_HasHoursColumns) {
 							Timestamp t1 = formatTimeField(line.getTime1());
 							Timestamp t2 = formatTimeField(line.getTime2());
 							Timestamp t3 = formatTimeField(line.getTime3());
 							Timestamp t4 = formatTimeField(line.getTime4());
-							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
-							if (al.getTime2()==null && t2!=null) al.setTime2(t2);
-							if (al.getTime3()==null && t3!=null) al.setTime3(t3);
-							if (al.getTime4()==null && t4!=null) al.setTime4(t4);
+							if (al.getTime1() == null && t1 != null) al.setTime1(t1);
+							if (al.getTime2() == null && t2 != null) al.setTime2(t2);
+							if (al.getTime3() == null && t3 != null) al.setTime3(t3);
+							if (al.getTime4() == null && t4 != null) al.setTime4(t4);
 						} else {
 							Timestamp t1 = formatTimeField(parsedDateTime);
-							if (al.getTime1()==null && t1!=null) al.setTime1(t1);
+							if (al.getTime1() == null && t1 != null) al.setTime1(t1);
 						}
 						al.saveEx();
 					}
-					this.statusUpdate("Procesando: "+count+"/"+sortedvalueDatelist.size()+" "+employed.getValue()+" "+employed.getName()+" "+al.getAttendanceDate());
-					day=parsedDate.toString();
-					emp=line.getValue();
-					alID=al.get_ID();
-				}else {
-					MHR_AttendanceLine al= new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
-					if(p_HasHoursColumns) {
-					if(line.getTime1()!=null) {
-						if(i==2) {
-							time2 = formatTimeField(line.getTime2());
-							al.setTime2(time2);
-							BigDecimal QtyOfHours1=BigDecimal.ZERO;
-							if(time1!=null && time2!=null) {
-								QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+					this.statusUpdate("Procesando: " + count + "/" + sortedvalueDatelist.size() + " " + employed.getValue() + " " + employed.getName() + " " + al.getAttendanceDate());
+					day = parsedDate.toString();
+					emp = line.getValue();
+					alID = al.get_ID();
+				} else {
+					MHR_AttendanceLine al = new MHR_AttendanceLine(getCtx(), alID, get_TrxName());
+					if (p_HasHoursColumns) {
+						if (line.getTime1() != null) {
+							if (i == 2) {
+								time2 = formatTimeField(line.getTime2());
+								al.setTime2(time2);
+								BigDecimal QtyOfHours1 = BigDecimal.ZERO;
+								if (time1 != null && time2 != null) {
+									QtyOfHours1 = BigDecimal.valueOf((time2.getTime() - time1.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours1(QtyOfHours1);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
 							}
-							if(i==3) {
+							if (i == 3) {
 								time3 = formatTimeField(line.getTime3());
 								al.setTime3(time3);
 							}
-							if(i>=4) {
+							if (i >= 4) {
 								time4 = formatTimeField(line.getTime4());
 								al.setTime4(time4);
-								BigDecimal QtyOfHours2=BigDecimal.ZERO;
-								if(time3!=null && time4!=null) {
-									QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+								BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+								if (time3 != null && time4 != null) {
+									QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time3.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours2(QtyOfHours2);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
 							}
 						}
-					}
-					else {
-						if(line.getDate()!=null) {
-							if(i==2) {
+					} else {
+						if (line.getDate() != null) {
+							if (i == 2) {
 								time2 = formatTimeField(line.getDate());
 								al.setTime2(time2);
-								BigDecimal QtyOfHours1=BigDecimal.ZERO;
-								if(time1!=null && time2!=null) {
-									QtyOfHours1 = BigDecimal.valueOf((time2.getTime()-time1.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+								BigDecimal QtyOfHours1 = BigDecimal.ZERO;
+								if (time1 != null && time2 != null) {
+									QtyOfHours1 = BigDecimal.valueOf((time2.getTime() - time1.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours1(QtyOfHours1);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours1));
 							}
-							if(i==3) {
+							if (i == 3) {
 								time3 = formatTimeField(line.getDate());
 								al.setTime3(time3);
 							}
-							if(i>=4) {
+							if (i >= 4) {
 								time4 = formatTimeField(line.getDate());
 								al.setTime4(time4);
-								BigDecimal QtyOfHours2=BigDecimal.ZERO;
-								if(time3!=null && time4!=null) {
-									QtyOfHours2 = BigDecimal.valueOf((time4.getTime()-time3.getTime())/(1000*60)).divide(BigDecimal.valueOf(60),2,RoundingMode.HALF_EVEN);
+								BigDecimal QtyOfHours2 = BigDecimal.ZERO;
+								if (time3 != null && time4 != null) {
+									QtyOfHours2 = BigDecimal.valueOf((time4.getTime() - time3.getTime()) / (1000 * 60)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 								}
 								al.setQtyOfHours2(QtyOfHours2);
 								al.setTotalQtyOfHours(al.getTotalQtyOfHours().add(QtyOfHours2));
@@ -636,31 +708,31 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 						}
 					}
 					al.saveEx();
-					if(count==sortedvalueDatelist.size())
+					if (count == sortedvalueDatelist.size())
 						checkLastAttendanceTime(al.get_ID());
 				}
 				i++;
-				if(i%5000==0)
+				if (i % 5000 == 0)
 					commitEx();
 			}
-			if(usersNotFoundList.length()>0) {
-				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: "+usersNotFoundList);
+			if (usersNotFoundList.length() > 0) {
+				attendance.set_ValueOfColumn("Description", "Usuarios no encontrados: " + usersNotFoundList);
 				attendance.saveEx();
 			}
 
 			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-	        String dateTimeSuffix = LocalDateTime.now().format(formatter);
+			String dateTimeSuffix = LocalDateTime.now().format(formatter);
 
 			String newFileName = ATTENDANCE_FILE_LOCATION + "/procesado/" + csvFile.getName().substring(0, csvFile.getName().length() - 4);
-			newFileName = newFileName+"_"+dateTimeSuffix+".csv";
+			newFileName = newFileName + "_" + dateTimeSuffix + ".csv";
 
 			File destDir = new File(ATTENDANCE_FILE_LOCATION + "/procesado/");
 			if (!destDir.exists()) {
-			    boolean dirCreated = destDir.mkdirs();
-			    if (!dirCreated) {
-			        log.severe("No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath());
-			        return "@Error@ No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath();
-			    }
+				boolean dirCreated = destDir.mkdirs();
+				if (!dirCreated) {
+					log.severe("No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath());
+					return "@Error@ No se pudo crear la carpeta de destino: " + destDir.getAbsolutePath();
+				}
 			}
 
 			File newFile = new File(newFileName);
@@ -668,24 +740,24 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 
 			boolean moved = csvFile.renameTo(newFile);
 			if (moved) {
-			    log.info("Archivo movido exitosamente a: " + newFile.getAbsolutePath());
+				log.info("Archivo movido exitosamente a: " + newFile.getAbsolutePath());
 			} else {
-			    log.severe("Error al mover el archivo a: " + newFile.getAbsolutePath());
+				log.severe("Error al mover el archivo a: " + newFile.getAbsolutePath());
 
-			    try {
-			        Files.copy(csvFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-			        log.info("Archivo copiado exitosamente a: " + newFile.getAbsolutePath());
+				try {
+					Files.copy(csvFile.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+					log.info("Archivo copiado exitosamente a: " + newFile.getAbsolutePath());
 
-			        boolean deleted = csvFile.delete();
-			        if (deleted) {
-			            log.info("Archivo original eliminado después de copiar: " + csvFile.getAbsolutePath());
-			        } else {
-			            log.severe("Error al eliminar el archivo original: " + csvFile.getAbsolutePath());
-			        }
-			    } catch (IOException e) {
-			        log.severe("Error al copiar el archivo: " + e.getMessage());
-			        e.printStackTrace();
-			    }
+					boolean deleted = csvFile.delete();
+					if (deleted) {
+						log.info("Archivo original eliminado después de copiar: " + csvFile.getAbsolutePath());
+					} else {
+						log.severe("Error al eliminar el archivo original: " + csvFile.getAbsolutePath());
+					}
+				} catch (IOException e) {
+					log.severe("Error al copiar el archivo: " + e.getMessage());
+					e.printStackTrace();
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -693,58 +765,73 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		return null;
 	}
 
-	protected String writeAttendanceFromServer() throws Exception{
+	/**
+	 * Process attendance markings from files on the server directory
+	 * @return status message
+	 * @throws Exception
+	 */
+	protected String writeAttendanceFromServer() throws Exception {
 		ATTENDANCE_FILE_LOCATION = MSysConfig.getValue("ATTENDANCE_FILE_LOCATION", "/home/admin1/txt/", getAD_Client_ID());
 		File directory = new File(ATTENDANCE_FILE_LOCATION);
 
 		if (directory.exists() && directory.isDirectory()) {
-		    File[] files = directory.listFiles();
+			File[] files = directory.listFiles();
 
-		    if (files != null) {
-		        for (File file : files) {
-		            if (file.isFile()) {
-		                System.out.println("Nombre del archivo: " + file.getName());
-		                writeAttendance(file.getPath());
-		            }
-		        }
-		    } else {
-		        System.out.println("El directorio está vacío.");
-		    }
+			if (files != null) {
+				for (File file : files) {
+					if (file.isFile()) {
+						System.out.println("Nombre del archivo: " + file.getName());
+						writeAttendance(file.getPath());
+					}
+				}
+			} else {
+				System.out.println("El directorio está vacío.");
+			}
 		} else {
-		    System.out.println("La ubicación del archivo no es un directorio válido.");
+			System.out.println("La ubicación del archivo no es un directorio válido.");
 		}
 		return "Proceso Terminado";
 	}
 
+	/**
+	 * Retrieves the iDempiere Reference List value for a given date's day of the week.
+	 * Maps the Java DayOfWeek to the values in Reference ID 167.
+	 * 
+	 * @param WeekDayStr The date to evaluate.
+	 * @return The string value corresponding to the day of the week (e.g., "1" for Monday).
+	 */
 	protected String getWeekDayValue(Date WeekDayStr) {
 		Timestamp time = new Timestamp(WeekDayStr.getTime());
 		LocalDateTime attendancedateaux = time.toLocalDateTime();
-		List<MRefList> reflist = new Query(getCtx(), MRefList.Table_Name, "AD_Reference_ID=?",get_TrxName()).setParameters(167).list();
+		List<MRefList> reflist = new Query(getCtx(), MRefList.Table_Name, "AD_Reference_ID=?", get_TrxName()).setParameters(167).list();
 
-		for(MRefList ref : reflist) {
-			if(ref.getName().trim().compareToIgnoreCase(attendancedateaux.getDayOfWeek().toString())==0)
+		for (MRefList ref : reflist) {
+			if (ref.getName().trim().compareToIgnoreCase(attendancedateaux.getDayOfWeek().toString()) == 0)
 				return ref.getValue();
-
 		}
 		return null;
 	}
 
+	/**
+	 * Model class for CSV line data
+	 */
 	protected class attendanceCsvLine {
 
-	     public attendanceCsvLine(String string, Date parsedDateTime) {
-	    	 value=string;
-	    	 date=parsedDateTime;
+		public attendanceCsvLine(String string, Date parsedDateTime) {
+			value = string;
+			date = parsedDateTime;
 		}
 
-	     public attendanceCsvLine(String string, Date recordDate, Timestamp parsedDate1,Timestamp parsedDate2,
-	    		 Timestamp parsedDate3,Timestamp parsedDate4) {
-	    	 value=string;
-	    	 date=recordDate;
-	    	 time1=parsedDate1;
-	    	 time2=parsedDate2;
-	    	 time3=parsedDate3;
-	    	 time4=parsedDate4;
+		public attendanceCsvLine(String string, Date recordDate, Timestamp parsedDate1, Timestamp parsedDate2,
+				Timestamp parsedDate3, Timestamp parsedDate4) {
+			value = string;
+			date = recordDate;
+			time1 = parsedDate1;
+			time2 = parsedDate2;
+			time3 = parsedDate3;
+			time4 = parsedDate4;
 		}
+
 		public Date getDate() {
 			return date;
 		}
@@ -756,6 +843,7 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		public String getValue() {
 			return value;
 		}
+
 		public void setValue(String value) {
 			this.value = value;
 		}
@@ -791,102 +879,120 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		public void setTime4(Timestamp time4) {
 			this.time4 = time4;
 		}
+
 		public String value;
 		public Date date;
-	    public Timestamp time1;
+		public Timestamp time1;
 		public Timestamp time2;
-	    public Timestamp time3;
-	    public Timestamp time4;
+		public Timestamp time3;
+		public Timestamp time4;
 	}
 
+	/**
+	 * Calculate difference in hours based on shift configuration
+	 * @param attendanceline record to check
+	 * @param pShift shift configuration
+	 * @return difference in hours
+	 */
 	protected BigDecimal getDifference(MHR_AttendanceLine attendanceline, MGH_Shifts pShift) {
 		String WeekDay = attendanceline.getWeekDay();
-		if (WeekDay.equals(null))
+		if (WeekDay == null)
 			return BigDecimal.ZERO;
 
-		MGH_ShiftsLine shiftline = new Query(getCtx(), MGH_ShiftsLine.Table_Name, "GH_Shifts_ID=? AND WeekDay=?", get_TrxName()).setParameters(pShift.get_ID(),WeekDay).first();
+		MGH_ShiftsLine shiftline = new Query(getCtx(), MGH_ShiftsLine.Table_Name, "GH_Shifts_ID=? AND WeekDay=?", get_TrxName())
+				.setParameters(pShift.get_ID(), WeekDay)
+				.first();
 
-		LocalDateTime shiftTime1 = prepareTime(attendanceline.getAttendanceDate(),shiftline.getTime1());
-		LocalDateTime shiftTime2 = prepareTime(attendanceline.getAttendanceDate(),shiftline.getTime2());
-		LocalDateTime shiftTime3 = prepareTime(attendanceline.getAttendanceDate(),shiftline.getTime3());
-		LocalDateTime shiftTime4 = prepareTime(attendanceline.getAttendanceDate(),shiftline.getTime4());
-		LocalDateTime shiftTime1WithoutTolerance = prepareTime(attendanceline.getAttendanceDate(),shiftline.getTime1());
-		LocalDateTime shiftTime2WithoutTolerance = prepareTime(attendanceline.getAttendanceDate(),shiftline.getTime2());
-		LocalDateTime shiftTime3WithoutTolerance = prepareTime(attendanceline.getAttendanceDate(),shiftline.getTime3());
-		LocalDateTime shiftTime4WithoutTolerance = prepareTime(attendanceline.getAttendanceDate(),shiftline.getTime4());
+		if (shiftline == null) return BigDecimal.ZERO;
 
-		LocalDateTime attendanceTime1 = prepareTime(attendanceline.getAttendanceDate(),attendanceline.getTime1());
-		attendanceTime1 = (attendanceTime1==null? shiftTime1 : attendanceTime1);
-		LocalDateTime attendanceTime2 = prepareTime(attendanceline.getAttendanceDate(),attendanceline.getTime2());
-		attendanceTime2 = (attendanceTime2==null? attendanceTime1 : attendanceTime2);
-		LocalDateTime attendanceTime3 = prepareTime(attendanceline.getAttendanceDate(),attendanceline.getTime3());
-		LocalDateTime attendanceTime4 = prepareTime(attendanceline.getAttendanceDate(),attendanceline.getTime4());
+		LocalDateTime shiftTime1 = prepareTime(attendanceline.getAttendanceDate(), shiftline.getTime1());
+		LocalDateTime shiftTime2 = prepareTime(attendanceline.getAttendanceDate(), shiftline.getTime2());
+		LocalDateTime shiftTime3 = prepareTime(attendanceline.getAttendanceDate(), shiftline.getTime3());
+		LocalDateTime shiftTime4 = prepareTime(attendanceline.getAttendanceDate(), shiftline.getTime4());
+		
+		LocalDateTime shiftTime1WithoutTolerance = prepareTime(attendanceline.getAttendanceDate(), shiftline.getTime1());
+		LocalDateTime shiftTime2WithoutTolerance = prepareTime(attendanceline.getAttendanceDate(), shiftline.getTime2());
+		LocalDateTime shiftTime3WithoutTolerance = prepareTime(attendanceline.getAttendanceDate(), shiftline.getTime3());
+		LocalDateTime shiftTime4WithoutTolerance = prepareTime(attendanceline.getAttendanceDate(), shiftline.getTime4());
 
-		if(shiftTime1==null || shiftTime2==null ||shiftTime3==null ||shiftTime4==null) return BigDecimal.ZERO;
+		LocalDateTime attendanceTime1 = prepareTime(attendanceline.getAttendanceDate(), attendanceline.getTime1());
+		attendanceTime1 = (attendanceTime1 == null ? shiftTime1 : attendanceTime1);
+		LocalDateTime attendanceTime2 = prepareTime(attendanceline.getAttendanceDate(), attendanceline.getTime2());
+		attendanceTime2 = (attendanceTime2 == null ? attendanceTime1 : attendanceTime2);
+		LocalDateTime attendanceTime3 = prepareTime(attendanceline.getAttendanceDate(), attendanceline.getTime3());
+		LocalDateTime attendanceTime4 = prepareTime(attendanceline.getAttendanceDate(), attendanceline.getTime4());
+
+		if (shiftTime1 == null || shiftTime2 == null || shiftTime3 == null || shiftTime4 == null) return BigDecimal.ZERO;
+		
 		shiftTime1 = shiftTime1.plusMinutes(shiftline.getTolerance().longValue());
 		shiftTime4 = shiftTime4.minusMinutes(shiftline.getTolerance().longValue());
 		shiftTime2 = shiftTime2.minusMinutes(shiftline.getRestTolerance().longValue());
 		shiftTime3 = shiftTime3.plusMinutes(shiftline.getRestTolerance().longValue());
 
 		Duration duration = Duration.between(shiftTime1WithoutTolerance, attendanceTime1);
-
 		double diffTime1 = duration.toMinutes();
-		if(diffTime1 <= shiftline.getTolerance().doubleValue())
+		if (diffTime1 <= shiftline.getTolerance().doubleValue())
 			duration = Duration.between(shiftTime1, attendanceTime1);
 
-		diffTime1 = diffTime1 < 0.0 ?0.0:diffTime1;
-		double diffTime2=0.0;
-		double diffTime3=0.0;
-		double diffTime4=0.0;
-		if(attendanceline.getAuthorizationType()!=null && "LC".compareTo(attendanceline.getAuthorizationType())!=0) {
+		diffTime1 = diffTime1 < 0.0 ? 0.0 : diffTime1;
+		double diffTime2 = 0.0;
+		double diffTime3 = 0.0;
+		double diffTime4 = 0.0;
+		
+		if (attendanceline.getAuthorizationType() != null && "LC".compareTo(attendanceline.getAuthorizationType()) != 0) {
 			shiftTime4 = shiftTime1WithoutTolerance.plusHours(8);
 		}
-			LocalDateTime attendanceTimeAux=shiftTime3WithoutTolerance;
-			duration = Duration.between(attendanceTime2,shiftTime2WithoutTolerance);
-			diffTime2 = duration.toMinutes();
-			if(diffTime2 <= shiftline.getRestTolerance().doubleValue())
-				duration = Duration.between(attendanceTime2,shiftTime2);
+		
+		LocalDateTime attendanceTimeAux = shiftTime3WithoutTolerance;
+		duration = Duration.between(attendanceTime2, shiftTime2WithoutTolerance);
+		diffTime2 = duration.toMinutes();
+		if (diffTime2 <= shiftline.getRestTolerance().doubleValue())
+			duration = Duration.between(attendanceTime2, shiftTime2);
 
-			diffTime2 = diffTime2 < 0.0 ?0.0:diffTime2;
+		diffTime2 = diffTime2 < 0.0 ? 0.0 : diffTime2;
 
-			if(attendanceTime3!=null) {
+		if (attendanceTime3 != null) {
+			duration = Duration.between(shiftTime3WithoutTolerance, attendanceTime3);
+			diffTime3 = duration.toMinutes();
+			if (diffTime3 <= shiftline.getRestTolerance().doubleValue())
+				duration = Duration.between(shiftTime3, attendanceTime3);
 
-				duration = Duration.between(shiftTime3WithoutTolerance,attendanceTime3);
-				diffTime3 = duration.toMinutes();
-				if(diffTime3 <= shiftline.getRestTolerance().doubleValue())
-					duration = Duration.between(shiftTime3, attendanceTime3);
+			diffTime3 = diffTime3 < 0.0 ? 0.0 : diffTime3;
+		} else if (attendanceTime2.compareTo(shiftTime3) > 0) {
+			attendanceTimeAux = attendanceTime2;
+		}
 
-				diffTime3 = diffTime3 < 0.0 ?0.0:diffTime3;
-			}else if(attendanceTime2.compareTo(shiftTime3)>0){
-				attendanceTimeAux=attendanceTime2;
-			}
+		if (attendanceTime4 != null) {
+			duration = Duration.between(attendanceTime4, shiftTime4);
+			diffTime4 = duration.toMinutes();
+			diffTime4 = diffTime4 < 0.0 ? 0.0 : diffTime4;
+		}
 
-			if(attendanceTime4!=null) {
+		if (attendanceTime3 == null && attendanceTime4 == null && attendanceTimeAux.compareTo(shiftTime4) < 0) {
+			duration = Duration.between(attendanceTimeAux, shiftTime4WithoutTolerance);
+			diffTime4 = duration.toMinutes();
+		}
 
-				duration = Duration.between(attendanceTime4,shiftTime4);
-				diffTime4 = duration.toMinutes();
-				diffTime4 = diffTime4 < 0.0 ? 0.0:diffTime4;
-			}
-
-			if(attendanceTime3==null && attendanceTime4==null && attendanceTimeAux.compareTo(shiftTime4)<0) {
-				duration= Duration.between(attendanceTimeAux,shiftTime4WithoutTolerance);
-				diffTime4 =duration.toMinutes();
-			}
-
-		attendanceline.setQtyMinutesDifference1(BigDecimal.valueOf(diffTime1+diffTime2));
-		attendanceline.setQtyMinutesDifference2(BigDecimal.valueOf(diffTime3+diffTime4));
+		attendanceline.setQtyMinutesDifference1(BigDecimal.valueOf(diffTime1 + diffTime2));
+		attendanceline.setQtyMinutesDifference2(BigDecimal.valueOf(diffTime3 + diffTime4));
 		attendanceline.saveEx();
 
-		BigDecimal diference = BigDecimal.valueOf((diffTime1+diffTime2+diffTime3+diffTime4)/60.0).setScale(2, RoundingMode.HALF_UP);
-		log.severe("total"+String.valueOf(diffTime1+diffTime2+diffTime3+diffTime4));
+		BigDecimal diference = BigDecimal.valueOf((diffTime1 + diffTime2 + diffTime3 + diffTime4) / 60.0).setScale(2, RoundingMode.HALF_UP);
+		log.severe("total" + String.valueOf(diffTime1 + diffTime2 + diffTime3 + diffTime4));
 
-		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
+		return (diference.compareTo(BigDecimal.ZERO) > 0) ? diference : BigDecimal.ZERO;
 	}
 
+	/**
+	 * Prepare time for calculation by combining attendance date with shift time
+	 * @param attendanceDate date of attendance
+	 * @param time1 time component
+	 * @return combined LocalDateTime
+	 */
 	protected LocalDateTime prepareTime(Timestamp attendanceDate, Timestamp time1) {
-		if(attendanceDate==null)
+		if (attendanceDate == null)
 			return null;
-		if(time1==null)
+		if (time1 == null)
 			return null;
 		LocalDateTime aux = time1.toLocalDateTime();
 		LocalDateTime time = attendanceDate.toLocalDateTime();
@@ -895,33 +1001,48 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		return time;
 	}
 
+	/**
+	 * Format time field to standard 1970-01-01 base for comparison
+	 * @param dateTime source date time
+	 * @return formatted timestamp
+	 */
 	protected Timestamp formatTimeField(Date dateTime) {
-		if(dateTime==null)
+		if (dateTime == null)
 			return null;
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(dateTime);
-        cal.set(Calendar.YEAR, 1970);
-        cal.set(Calendar.MONTH, Calendar.JANUARY);
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        Date newDate = cal.getTime();
+		cal.set(Calendar.YEAR, 1970);
+		cal.set(Calendar.MONTH, Calendar.JANUARY);
+		cal.set(Calendar.DAY_OF_MONTH, 1);
+		Date newDate = cal.getTime();
 		return new Timestamp(newDate.getTime());
 	}
 
+	/**
+	 * Extract only date component (00:00:00)
+	 * @param fecha source date
+	 * @param formato simple date format
+	 * @return date without time
+	 */
 	protected static Date extraerFecha(Date fecha, SimpleDateFormat formato) {
-        try {
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(fecha);
-            cal.set(Calendar.HOUR_OF_DAY, 0);
-            cal.set(Calendar.MINUTE, 0);
-            cal.set(Calendar.SECOND, 0);
-            cal.set(Calendar.MILLISECOND, 0);
-            return cal.getTime();
-        } catch (Exception e) {
-            System.out.println("Error al formatear la fecha: " + e.getMessage());
-            return null;
-        }
-    }
+		try {
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(fecha);
+			cal.set(Calendar.HOUR_OF_DAY, 0);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			cal.set(Calendar.MILLISECOND, 0);
+			return cal.getTime();
+		} catch (Exception e) {
+			System.out.println("Error al formatear la fecha: " + e.getMessage());
+			return null;
+		}
+	}
 
+	/**
+	 * Verify and adjust last attendance time logic
+	 * @param id attendance line ID
+	 */
 	protected void checkLastAttendanceTime(int id) {
 		if (id <= 0) {
 			return;
@@ -932,11 +1053,10 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 			return;
 		}
 
-		if(al.getTime4()==null && al.getTime3()!=null) {
+		if (al.getTime4() == null && al.getTime3() != null) {
 			al.setTime4(al.getTime3());
 			al.setTime3(null);
-		}
-		else if(al.getTime4()==null && al.getTime3()==null && al.getTime2()!=null) {
+		} else if (al.getTime4() == null && al.getTime3() == null && al.getTime2() != null) {
 			al.setTime4(al.getTime2());
 			al.setTime2(null);
 		}
@@ -945,6 +1065,10 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		al.saveEx();
 	}
 
+	/**
+	 * Recalculate working hours for a line
+	 * @param al attendance line
+	 */
 	private void recalculateCollapsedHours(MHR_AttendanceLine al) {
 		BigDecimal qty1 = Env.ZERO;
 		BigDecimal qty2 = Env.ZERO;
@@ -979,6 +1103,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		al.setTotalQtyOfHours(total);
 	}
 
+	/**
+	 * Calculate hours between two timestamps
+	 * @param from start
+	 * @param to end
+	 * @return hours as BigDecimal
+	 */
 	private BigDecimal calculateHoursBetween(Timestamp from, Timestamp to) {
 		if (from == null || to == null) {
 			return Env.ZERO;
@@ -993,6 +1123,10 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 				.divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_EVEN);
 	}
 
+	/**
+	 * Get blackout period in milliseconds from configuration
+	 * @return blackout millis
+	 */
 	private long getAttendanceTimeBlockMillis() {
 		String configuredValue = MSysConfig.getValue(
 				ATTENDANCE_TIME_BLOCK_SYSCONFIG,
@@ -1016,6 +1150,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		return Duration.ofMinutes(minutes).toMillis();
 	}
 
+	/**
+	 * Filter out markings that are too close in time for the same employee/day
+	 * @param source list of markings
+	 * @param dateTimeFormat format for date extraction
+	 * @return filtered list
+	 */
 	private List<attendanceCsvLine> filterNearbyMarkings(List<attendanceCsvLine> source, SimpleDateFormat dateTimeFormat) {
 		List<attendanceCsvLine> filtered = new ArrayList<>();
 		attendanceCsvLine lastAccepted = null;
@@ -1053,6 +1193,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 		return filtered;
 	}
 
+	/**
+	 * Find existing attendance line for an employee on a specific date
+	 * @param bpartnerId employee ID
+	 * @param dateOnly date to search
+	 * @return existing line or null
+	 */
 	private MHR_AttendanceLine findExistingAttendanceLine(int bpartnerId, Date dateOnly) {
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(dateOnly);
@@ -1071,25 +1217,33 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess{
 				.first();
 	}
 
+	/**
+	 * Check if the exception is a database unique violation
+	 * @param t throwable
+	 * @return true if it's a unique violation
+	 */
 	private boolean isUniqueViolation(Throwable t) {
-	    while (t != null) {
-	        if (t instanceof SQLException) {
-	            String sqlState = ((SQLException) t).getSQLState();
-	            if ("23505".equals(sqlState)) {
-	                return true;
-	            }
-	        }
-	        String msg = t.getMessage();
-	        if (msg != null) {
-	            if (msg.contains("SaveErrorNotUnique") ||
-	                msg.contains("duplicate key value") ||
-	                (msg.contains("restricci") && msg.contains("unicidad")) ||
-	                msg.contains("nonduplicatedlines")) {
-	                return true;
-	            }
-	        }
-	        t = t.getCause();
-	    }
-	    return false;
+		while (t != null) {
+			if (t instanceof SQLException) {
+				String sqlState = ((SQLException) t).getSQLState();
+				if ("23505".equals(sqlState)) {
+					return true;
+				}
+			}
+			String msg = t.getMessage();
+			if (msg != null) {
+				if (msg.contains("SaveErrorNotUnique") ||
+					msg.contains("duplicate key value") ||
+					(msg.contains("restricci") && msg.contains("unicidad")) ||
+					msg.contains("nonduplicatedlines")) {
+					return true;
+				}
+			}
+			t = t.getCause();
+		}
+		return false;
+	}
+}
+
 	}
 }
