@@ -203,4 +203,4 @@ The `com.cdsoftware.attendance` plugin is a custom extension for iDempiere. It e
 ## Instructions
 1. Deploy the `com.cdsoftware.attendance` OSGi bundle in your iDempiere environment.
 2. Restart iDempiere and refresh OSGi bundles to register factories.
-3. Configure dictionary and role access rules as needed. 
+3. Configure dictionary and role access rules as needed.
