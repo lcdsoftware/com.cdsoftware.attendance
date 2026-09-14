@@ -1,206 +1,198 @@
 # com.cdsoftware.attendance
+
 - Copyright: 2026 https://www.casadelsoftware.com
-- Repository: https://bitbucket.org/cdsoftware/com.cdsoftware.attendance.git
+- Repository: https://github.com/lcdsoftware/com.cdsoftware.attendance
 - License: GPL 2
 
 ## Description
-The `com.cdsoftware.attendance` plugin is a custom extension for iDempiere. It extends standard system capabilities by providing custom server processes, column callouts, database models, and Application Dictionary configurations (2Pack) to track employee clock-in/out logs, shifts, and biometric time card integrations.
+
+iDempiere attendance management extension for employee shifts, biometric markings, daily attendance, missing dates, permissions, and payroll extra-hour calculation. It imports data from attachments, directories, interface tables, Bioadmin, ITAS, ZKTeco, and a REST service. Importers populate attendance lines or staging records; payroll processes calculate absence and extra-hour attributes from existing attendance data.
 
 ## Contributors
-- 2024 Carlo Gonzalez <carlogonzalez@casadelsoftware.com>.
+
+- 2024–2026 Carlo Gonzalez <carlogonzalez@casadelsoftware.com>.
 - 2024 Eduardo Gil <egil@ghintech.com>.
 - 2024 Josian Ascanio <josianascanio@casadelsoftware.com>.
-- 2026 Angel Lara <angel@casadelsoftware.com>.
+- 2024–2026 Ángel Lara <angel@casadelsoftware.com>.
 
 ## Components
+
 - iDempiere Plugin [com.cdsoftware.attendance](com.cdsoftware.attendance)
 - iDempiere Unit Test Fragment [com.cdsoftware.attendance.test](com.cdsoftware.attendance.test)
 
 ## Prerequisites
-- Java 11, commands `java` and `javac`.
+
+- Java 17, commands `java` and `javac`.
 - iDempiere 12
-- Dependencies: joda-time, json, com.cdsoftware.payroll, com.cdsoftware.pluginconfig, 13.0.0)"
+- `joda-time` 2.10.8
+- `json` 20190722.0.0
+- `com.cdsoftware.payroll` 12.0.0
+- `com.cdsoftware.pluginconfig` 12.x
 
 ## Features/Documentation
+
 ### Source Structure
-```
-├── com/
-        ├── cdsoftware/
-            ├── lirion/
-                ├── attendance/
-                    ├── util/
-                        ├── FileTemplateBuilder.java
-                        ├── KeyValueLogger.java
-                        ├── SqlBuilder.java
-                        ├── TimestampUtil.java
-                    ├── model/
-                        ├── I_GH_Shifts.java
-                        ├── I_GH_ShiftsLine.java
-                        ├── I_GH_Shifts_RG.java
-                        ├── I_GH_Shifts_RG_Line.java
-                        ├── I_HR_Attendance.java
-                        ├── I_HR_AttendanceDevices.java
-                        ├── I_HR_AttendanceLine.java
-                        ├── I_HR_C_BPartnerShifts.java
-                        ├── I_I_Attendance.java
-                        ├── I_I_Marking.java
-                        ├── MGH_Shifts.java
-                        ├── MGH_ShiftsLine.java
-                        ├── MHR_Attendance.java
-                        ├── MHR_AttendanceLine.java
-                        ├── MHR_C_BPartnerShifts.java
-                        ├── MIAttendance.java
-                        ├── MMarking.java
-                        ├── X_GH_Shifts.java
-                        ├── X_GH_ShiftsLine.java
-                        ├── X_GH_Shifts_RG.java
-                        ├── X_GH_Shifts_RG_Line.java
-                        ├── X_HR_Attendance.java
-                        ├── X_HR_AttendanceDevices.java
-                        ├── X_HR_AttendanceLine.java
-                        ├── X_HR_C_BPartnerShifts.java
-                        ├── X_I_Attendance.java
-                        ├── X_I_Marking.java
-                    ├── base/
-                        ├── BundleInfo.java
-                        ├── CustomCallout.java
-                        ├── CustomEvent.java
-                        ├── CustomForm.java
-                        ├── CustomProcess.java
-                    ├── callout/
-                        ├── CheckBpPermission.java
-                        ├── SetQtyOfHours.java
-                    ├── component/
-                        ├── CalloutFactory.java
-                        ├── EventFactory.java
-                        ├── FormFactory.java
-                        ├── ModelFactory.java
-                        ├── ProcessFactory.java
-                    ├── process/
-                        ├── AddMissingDates.java
-                        ├── CalculateExtraHour.java
-                        ├── CompleteAttendance.java
-                        ├── Create_C_BPartner_Shift.java
-                        ├── ImportAttendance.java
-                        ├── ImportAttendanceBioadmin.java
-                        ├── ImportAttendanceBioadminClkCode.java
-                        ├── ImportAttendanceFromAttachment.java
-                        ├── ImportAttendanceFromAttachmentBioadmin.java
-                        ├── ImportAttendanceFromAttachmentITAS.java
-                        ├── ImportAttendanceFromAttachmentZKTeco.java
-                        ├── ImportAttendanceFromAttachmentzk.java
-                        ├── ImportAttendanceFromFile.java
-                        ├── ImportAttendanceFromI_Attendance.java
-                        ├── ImportAttendanceFromServerREST.java
-                        ├── ProcessAttendance.java
-                        ├── ProcessAttendanceBioadmin.java
+
+```text
+com.cdsoftware.attendance/src
+└── com
+    └── cdsoftware
+        └── lirion
+            └── attendance
+                ├── base
+                │   ├── BundleInfo.java
+                │   ├── CustomCallout.java
+                │   ├── CustomEvent.java
+                │   ├── CustomForm.java
+                │   └── CustomProcess.java
+                ├── callout
+                │   ├── CheckBpPermission.java
+                │   └── SetQtyOfHours.java
+                ├── component
+                │   ├── CalloutFactory.java
+                │   ├── EventFactory.java
+                │   ├── FormFactory.java
+                │   ├── ModelFactory.java
+                │   └── ProcessFactory.java
+                ├── model
+                │   ├── I_GH_Shifts.java
+                │   ├── I_GH_ShiftsLine.java
+                │   ├── I_GH_Shifts_RG.java
+                │   ├── I_GH_Shifts_RG_Line.java
+                │   ├── I_HR_Attendance.java
+                │   ├── I_HR_AttendanceDevices.java
+                │   ├── I_HR_AttendanceLine.java
+                │   ├── I_HR_C_BPartnerShifts.java
+                │   ├── I_I_Attendance.java
+                │   ├── I_I_Marking.java
+                │   ├── MGH_Shifts.java
+                │   ├── MGH_ShiftsLine.java
+                │   ├── MHR_Attendance.java
+                │   ├── MHR_AttendanceLine.java
+                │   ├── MHR_C_BPartnerShifts.java
+                │   ├── MIAttendance.java
+                │   ├── MMarking.java
+                │   ├── X_GH_Shifts.java
+                │   ├── X_GH_ShiftsLine.java
+                │   ├── X_GH_Shifts_RG.java
+                │   ├── X_GH_Shifts_RG_Line.java
+                │   ├── X_HR_Attendance.java
+                │   ├── X_HR_AttendanceDevices.java
+                │   ├── X_HR_AttendanceLine.java
+                │   ├── X_HR_C_BPartnerShifts.java
+                │   ├── X_I_Attendance.java
+                │   └── X_I_Marking.java
+                ├── process
+                │   ├── AddMissingDates.java
+                │   ├── CalculateExtraHour.java
+                │   ├── CompleteAttendance.java
+                │   ├── Create_C_BPartner_Shift.java
+                │   ├── ImportAttendance.java
+                │   ├── ImportAttendanceBioadmin.java
+                │   ├── ImportAttendanceBioadminClkCode.java
+                │   ├── ImportAttendanceFromAttachment.java
+                │   ├── ImportAttendanceFromAttachmentBioadmin.java
+                │   ├── ImportAttendanceFromAttachmentITAS.java
+                │   ├── ImportAttendanceFromAttachmentZKTeco.java
+                │   ├── ImportAttendanceFromAttachmentzk.java
+                │   ├── ImportAttendanceFromFile.java
+                │   ├── ImportAttendanceFromI_Attendance.java
+                │   ├── ImportAttendanceFromServerREST.java
+                │   ├── ProcessAttendance.java
+                │   └── ProcessAttendanceBioadmin.java
+                └── util
+                    ├── FileTemplateBuilder.java
+                    ├── KeyValueLogger.java
+                    ├── SqlBuilder.java
+                    └── TimestampUtil.java
+com.cdsoftware.attendance.test/src
+└── com
+    └── cdsoftware
+        └── lirion
+            └── attendance
+                ├── test
+                │   ├── assertion
+                │   │   └── Annotations.java
+                │   └── util
+                │       ├── RandomTestUtil.java
+                │       └── ReflectionTestUtil.java
+                └── util
+                    ├── FileTemplateBuilderTest.java
+                    ├── KeyValueLoggerTest.java
+                    ├── SqlBuilderTest.java
+                    └── TimestampUtilTest.java
 ```
 
 ### Processes
 
-| Class Name | Purpose | Main Parameters | Key Logic & Results |
+Parameters below describe what the Java implementation reads and needs. Actual mandatory flags and defaults must also be checked in the installed Application Dictionary; annotations alone do not install a process or its parameters.
+
+| Class | Purpose | Main parameters and requirements | Key logic and results |
 | --- | --- | --- | --- |
-| `CalculateExtraHour` | Server process. | `AttendanceDate`, `AttendanceDate2`, `C_BPartner_ID`, `HR_Attendance_ID`, `HR_Process_ID`, `Time1`, `Time2` | Re-calculates totals, hours, or costs based on transaction context. |
-| `ImportAttendanceFromAttachmentzk` | Server process. | None | Executes core logic and updates database records. |
-| `ImportAttendanceBioadmin` | Server process. | None | Executes core logic and updates database records. |
-| `ImportAttendanceBioadminClkCode` | Server process. | None | Executes core logic and updates database records. |
-| `ProcessAttendanceBioadmin` | Server process. | `C_BPartner_ID` | Updates approval status and logs the approver's user ID. |
-| `ImportAttendanceFromFile` | Server process. | `File_Directory` | Executes core logic and updates database records. |
-| `ImportAttendanceFromI_Attendance` | Server process. | `Device_Name` | Executes core logic and updates database records. |
-| `ImportAttendanceFromAttachmentITAS` | Server process. | None | Executes core logic and updates database records. |
-| `CompleteAttendance` | Server process. | `Description` | Executes core logic and updates database records. |
-| `AddMissingDates` | Server process. | `DateFrom`, `HR_Attendance_ID` | Executes core logic and updates database records. |
-| `ProcessAttendance` | Server process. | `C_BPartner_ID` | Updates approval status and logs the approver's user ID. |
-| `ImportAttendanceFromAttachmentZKTeco` | Server process. | `DateFormat`, `DateTimeFormat`, `HasHeader` | Executes core logic and updates database records. |
-| `ImportAttendanceFromAttachmentBioadmin` | Server process. | `DateTimeFormat`, `FormatType`, `HasHeader`, `HasHoursColumns`, `Hour1Index`, `Hour2Index`, `Hour3Index`, `Hour4Index` | Executes core logic and updates database records. |
-| `ImportAttendance` | Server process. | `C_BPartner_ID`, `MarkingDate` | Executes core logic and updates database records. |
-| `ImportAttendanceFromAttachment` | Server process. | None | Executes core logic and updates database records. |
-| `Create_C_BPartner_Shift` | Server process. | `C_BPartner_ID`, `DateFrom`, `DateTo`, `GH_Shifts_ID`, `GH_Shifts_RG_ID`, `HR_Department_ID` | Creates new records and links them to the active context. |
-| `ImportAttendanceFromServerREST` | Server process. | `HR_AttendanceDevices_ID` | Executes core logic and updates database records. |
+| `AddMissingDates` | Generate missing attendance dates or delete empty data. | Generation: `HR_Attendance_ID` or both ends of the `DateFrom` range. Optional `delete` (default false); deletion uses the explicit date range. | Creates missing employee/day lines using employment and shift assignments. Delete mode removes zero-hour lines in the range and all line-less headers for the client, not just the selected header. |
+| `CalculateExtraHour` | Calculate payroll extra hours. | `AttendanceDate`, `C_BPartner_ID`, `Time1`, `Time2` and payroll/attendance context must be usable; also reads `AttendanceDate2`, `HR_Process_ID`, `HR_Attendance_ID`. | Classifies daytime, nighttime, rest-day and Sunday intervals and saves `HR_Attribute` amounts using predefined payroll concept search keys. Requires the corresponding shift and payroll setup. |
+| `CompleteAttendance` | Incomplete legacy clock-out estimation. | `Description` is interpreted as a numeric shift ID. | Queries `I_Marking` rows with null `Time2` and compares shift times. The implementation does not assign or save an estimated clock-out; it must not be treated as an operational completion process. |
+| `Create_C_BPartner_Shift` | Assign a shift to employees. | Usable `DateFrom`, `DateTo`, `GH_Shifts_ID`, and employee selection through `C_BPartner_ID` or `GH_Shifts_RG_ID`. `HR_Department_ID` is read but unused. | A supplied group replaces the single-employee selection. Creates dated `HR_C_BPartnerShifts` records and skips assignments detected by its existing-range check. |
+| `ImportAttendance` | Calculate lateness from legacy markings. | `MarkingDate` range is needed. `C_BPartner_ID` is read but not applied as a query filter. | Reads existing `I_Marking` rows, sums shift-hour differences by employee value, marks rows imported and creates absence-hour `HR_Attribute` records. It does not create a manual marking; payroll process and organization IDs are hardcoded. |
+| `ImportAttendanceBioadmin` | Import Bioadmin directory files. | No named parameters; requires files under `ATTENDANCE_FILE_LOCATION`. | Parses supported layouts, resolves employees and writes attendance headers/lines. Uses format-specific file handling and renames processed files. |
+| `ImportAttendanceBioadminClkCode` | Import Bioadmin using clock codes. | No named parameters; requires `ATTENDANCE_FILE_LOCATION` and employee clock-code mappings. | Resolves device clock codes to employees, creates attendance headers/lines and renames processed files. |
+| `ImportAttendanceFromAttachment` | Import the supported delimited attendance layout. | No named parameters; attachment required on the current record. | Parses employee/date/time columns and creates attendance headers/lines. The column layout is implemented in the importer. |
+| `ImportAttendanceFromAttachmentBioadmin` | Import configurable Bioadmin attachments. | Attachment required. Layout options: `DateTimeFormat`, `FormatType`, `HasHeader`, `bpIndex`, `dateIndex`, `HasHoursColumns`, `Hour1Index`, `Hour2Index`, `Hour3Index`, `Hour4Index`; use values matching the input file. | Supports timestamp rows and separate hour columns, groups employee/date entries, applies its configured time-block filtering and writes attendance lines. Includes file archival handling. |
+| `ImportAttendanceFromAttachmentITAS` | Import ITAS attachments. | No named parameters; supported ITAS attachment required. | Parses employee/date/time fields into attendance lines and reports created and ignored row counts. |
+| `ImportAttendanceFromAttachmentZKTeco` | Import ZKTeco attachments. | Attachment and valid `DateTimeFormat` / `DateFormat` required; optional `HasHeader` defaults to false. | Groups parsed employee/date entries into attendance lines with up to four time values. |
+| `ImportAttendanceFromAttachmentzk` | Import legacy ZK attachments. | No named parameters; supported attachment required. | Parses the legacy layout and populates attendance data using its interface and attendance models. |
+| `ImportAttendanceFromFile` | Stage server-directory CSV data. | `File_Directory` must identify a readable directory. | Reads CSV files and saves `I_Attendance` records for subsequent interface import. |
+| `ImportAttendanceFromI_Attendance` | Convert interface rows into attendance. | Optional `Device_Name` filter; eligible `I_Attendance` records required. | Creates attendance headers/lines, updates interface records and can create missing employee or device records as implemented. |
+| `ImportAttendanceFromServerREST` | Stage attendance downloaded through REST. | Optional `HR_AttendanceDevices_ID` selects the device serial; URL comes from `CDS_AT_BASE_URL` or a fallback. | Authenticates and saves remote rows into `I_Attendance`. Authentication and context values are hardcoded in this version; device metadata alone does not configure the connection. |
+| `ProcessAttendance` | Calculate absence and extra-hour payroll attributes. | Current attendance header with `DateFrom` and `DateTo`; optional `C_BPartner_ID`. | Deletes existing `HR_Attribute` records linked to that attendance/client (and employee when selected), then evaluates existing attendance lines against shifts, holidays and rest days. Writes absence attributes and invokes extra-hour calculation. |
+| `ProcessAttendanceBioadmin` | Evaluate time differences in Bioadmin attendance lines. | Current attendance header with a date range; optional `C_BPartner_ID`. | Evaluates existing lines against shifts and updates time differences. Payroll absence writes, prior-attribute deletion and the extra-hour invocation are commented out in the execution path; this variant does not generate those payroll results. |
 
+### Events
 
+`EventFactory` scans `com.cdsoftware.lirion.attendance.event`, but this source tree contains no concrete event handlers. Its OSGi descriptor registers the component; it is not a 2Pack.
 
 ### Callouts
 
-| Callout Class | Target Field / Column | Business Validation & UI Impact |
+| Class | Target fields | Business rule and UI impact |
 | --- | --- | --- |
-| `SetQtyOfHours` | Calculated fields | Validates UI inputs or auto-populates dependent fields. |
-| `CheckBpPermission` | Calculated fields | Validates UI inputs or auto-populates dependent fields. |
+| `CheckBpPermission` | Annotation targets `M_Request`: `CDS_R_RequestTypeDetails_ID`, `R_RequestType_ID`, `C_BPartner_ID`, `CDS_StartDate`. Queries `R_Request`. | Returns `SubtypeOver3PerMonth` when the matching permission or tardiness count reaches three. Uses hardcoded type/subtype UUIDs and compares month numbers without a year filter. Verify the annotation target against the actual request table before relying on activation. |
+| `SetQtyOfHours` | `I_Marking`, `GH_ShiftsLine`, `HR_AttendanceLine`: `Time1` through `Time4`. | Calculates `QtyOfHours1`, `QtyOfHours2` and, when available, `TotalQtyOfHours`. Adds 24 hours for a negative interval to handle midnight crossing. |
 
+### Models
 
-### Generated Models
-
-| Model | Table | Functional role |
-| --- | --- | --- |
-| `X_HR_Attendance` | `X_HR_Attendance` | Represents database records and implements custom business logic. |
-| `X_HR_C_BPartnerShifts` | `X_HR_C_BPartnerShifts` | Represents database records and implements custom business logic. |
-| `I_GH_Shifts_RG` | `I_GH_Shifts_RG` | Represents database records and implements custom business logic. |
-| `X_GH_Shifts_RG_Line` | `X_GH_Shifts_RG_Line` | Represents database records and implements custom business logic. |
-| `I_HR_C_BPartnerShifts` | `I_HR_C_BPartnerShifts` | Represents database records and implements custom business logic. |
-| `MHR_AttendanceLine` | `HR_AttendanceLine` | This file is part of iDempiere ERP Open Source * http://www.idempiere.org * * Copyright (C) Contributors * * This program is free software; you can redistribute it and/or * modify it under the terms of the GNU General Public License * as published by the Free Software Foundation; either version 2 * of the License, or (at your option) any later version. * * This program is distributed in the hope that it will be useful, * but WITHOUT ANY WARRANTY; without even the implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the * GNU General Public License for more details. * * You should have received a copy of the GNU General Public License * along with this program; if not, write to the Free Software * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, * MA 02110-1301, USA. * * Contributors: * - Casa del Software * / package com.cdsoftware.lirion.attendance.model; import java.sql.ResultSet; import java.util.Properties; /** Model class for Attendance Lines (HR_AttendanceLine). Represents specific daily attendance records, including clock-in/out times, hours worked, and status (rest day, holiday, etc.). @author Casa del Software |
-| `I_I_Marking` | `I_I_Marking` | Represents database records and implements custom business logic. |
-| `I_I_Attendance` | `I_I_Attendance` | Represents database records and implements custom business logic. |
-| `I_HR_Attendance` | `I_HR_Attendance` | Represents database records and implements custom business logic. |
-| `X_HR_AttendanceDevices` | `X_HR_AttendanceDevices` | Represents database records and implements custom business logic. |
-| `MIAttendance` | `IAttendance` | This file is part of iDempiere ERP Open Source * http://www.idempiere.org * * Copyright (C) Contributors * * This program is free software; you can redistribute it and/or * modify it under the terms of the GNU General Public License * as published by the Free Software Foundation; either version 2 * of the License, or (at your option) any later version. * * This program is distributed in the hope that it will be useful, * but WITHOUT ANY WARRANTY; without even the implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the * GNU General Public License for more details. * * You should have received a copy of the GNU General Public License * along with this program; if not, write to the Free Software * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, * MA 02110-1301, USA. * * Contributors: * - Casa del Software * / package com.cdsoftware.lirion.attendance.model; import java.sql.ResultSet; import java.sql.Timestamp; import java.util.Properties; /** Model class for Attendance Import (I_Attendance). Used as a staging model for importing attendance records from external sources. @author Casa del Software |
-| `X_GH_Shifts_RG` | `X_GH_Shifts_RG` | Represents database records and implements custom business logic. |
-| `MMarking` | `Marking` | This file is part of iDempiere ERP Open Source * http://www.idempiere.org * * Copyright (C) Contributors * * This program is free software; you can redistribute it and/or * modify it under the terms of the GNU General Public License * as published by the Free Software Foundation; either version 2 * of the License, or (at your option) any later version. * * This program is distributed in the hope that it will be useful, * but WITHOUT ANY WARRANTY; without even the implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the * GNU General Public License for more details. * * You should have received a copy of the GNU General Public License * along with this program; if not, write to the Free Software * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, * MA 02110-1301, USA. * * Contributors: * - Casa del Software * / package com.cdsoftware.lirion.attendance.model; import java.sql.ResultSet; import java.util.List; import java.util.Properties; import org.compiere.model.MRefList; import org.compiere.model.Query; /** Model class for Attendance Markings (I_Marking). Represents raw markings imported from attendance devices. @author Casa del Software |
-| `X_GH_Shifts` | `X_GH_Shifts` | Represents database records and implements custom business logic. |
-| `MGH_Shifts` | `GH_Shifts` | This file is part of iDempiere ERP Open Source * http://www.idempiere.org * * Copyright (C) Contributors * * This program is free software; you can redistribute it and/or * modify it under the terms of the GNU General Public License * as published by the Free Software Foundation; either version 2 * of the License, or (at your option) any later version. * * This program is distributed in the hope that it will be useful, * but WITHOUT ANY WARRANTY; without even the implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the * GNU General Public License for more details. * * You should have received a copy of the GNU General Public License * along with this program; if not, write to the Free Software * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, * MA 02110-1301, USA. * * Contributors: * - Casa del Software * / package com.cdsoftware.lirion.attendance.model; import java.sql.ResultSet; import java.util.Properties; /** Model class for Work Shifts (GH_Shifts). Represents a work shift configuration, including diurnal/nocturnal boundaries and specific work rules. @author Casa del Software |
-| `X_GH_ShiftsLine` | `X_GH_ShiftsLine` | Represents database records and implements custom business logic. |
-| `MHR_C_BPartnerShifts` | `HR_C_BPartnerShifts` | This file is part of iDempiere ERP Open Source * http://www.idempiere.org * * Copyright (C) Contributors * * This program is free software; you can redistribute it and/or * modify it under the terms of the GNU General Public License * as published by the Free Software Foundation; either version 2 * of the License, or (at your option) any later version. * * This program is distributed in the hope that it will be useful, * but WITHOUT ANY WARRANTY; without even the implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the * GNU General Public License for more details. * * You should have received a copy of the GNU General Public License * along with this program; if not, write to the Free Software * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, * MA 02110-1301, USA. * * Contributors: * - Casa del Software * / package com.cdsoftware.lirion.attendance.model; import java.sql.ResultSet; import java.sql.Timestamp; import java.util.Properties; /** Model class for Business Partner Work Shifts (HR_C_BPartnerShifts). Links employees to specific work shifts for a given date range. @author Casa del Software |
-| `I_GH_Shifts_RG_Line` | `I_GH_Shifts_RG_Line` | Represents database records and implements custom business logic. |
-| `I_GH_Shifts` | `I_GH_Shifts` | Represents database records and implements custom business logic. |
-| `MHR_Attendance` | `HR_Attendance` | This file is part of iDempiere ERP Open Source * http://www.idempiere.org * * Copyright (C) Contributors * * This program is free software; you can redistribute it and/or * modify it under the terms of the GNU General Public License * as published by the Free Software Foundation; either version 2 * of the License, or (at your option) any later version. * * This program is distributed in the hope that it will be useful, * but WITHOUT ANY WARRANTY; without even the implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the * GNU General Public License for more details. * * You should have received a copy of the GNU General Public License * along with this program; if not, write to the Free Software * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, * MA 02110-1301, USA. * * Contributors: * - Casa del Software * / package com.cdsoftware.lirion.attendance.model; import java.sql.ResultSet; import java.sql.Timestamp; import java.time.LocalDateTime; import java.util.Date; import java.util.List; import java.util.Properties; import org.compiere.model.MRefList; import org.compiere.model.Query; /** Model class for Attendance Headers (HR_Attendance). Manages the top-level attendance records for a period and employee. @author Casa del Software |
-| `X_HR_AttendanceLine` | `X_HR_AttendanceLine` | Represents database records and implements custom business logic. |
-| `MGH_ShiftsLine` | `GH_ShiftsLine` | This file is part of iDempiere ERP Open Source * http://www.idempiere.org * * Copyright (C) Contributors * * This program is free software; you can redistribute it and/or * modify it under the terms of the GNU General Public License * as published by the Free Software Foundation; either version 2 * of the License, or (at your option) any later version. * * This program is distributed in the hope that it will be useful, * but WITHOUT ANY WARRANTY; without even the implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the * GNU General Public License for more details. * * You should have received a copy of the GNU General Public License * along with this program; if not, write to the Free Software * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, * MA 02110-1301, USA. * * Contributors: * - Casa del Software * / package com.cdsoftware.lirion.attendance.model; import java.sql.ResultSet; import java.util.Properties; /** Model class for Work Shift Lines (GH_ShiftsLine). Represents specific daily rules within a work shift, such as start and end times for different days of the week. @author Casa del Software |
-| `X_I_Marking` | `X_I_Marking` | Represents database records and implements custom business logic. |
-| `I_HR_AttendanceLine` | `I_HR_AttendanceLine` | Represents database records and implements custom business logic. |
-| `I_HR_AttendanceDevices` | `I_HR_AttendanceDevices` | Represents database records and implements custom business logic. |
-| `I_GH_ShiftsLine` | `I_GH_ShiftsLine` | Represents database records and implements custom business logic. |
-| `X_I_Attendance` | `X_I_Attendance` | Represents database records and implements custom business logic. |
-
+- `GH_Shifts` and `GH_ShiftsLine` define work schedules, daily intervals, tolerances, and breaks.
+- `GH_Shifts_RG` and its lines define rotating shift groups.
+- `HR_C_BPartnerShifts` assigns fixed or rotating shifts to employees for a validity period.
+- `HR_Attendance` and `HR_AttendanceLine` store consolidated attendance headers and employee-day details.
+- `I_Attendance` and `I_Marking` provide staging and raw-marking storage for imports.
+- `HR_AttendanceDevices` stores biometric or REST device connection metadata.
 
 ### Application Dictionary Metadata (2Pack)
 
-| Package / File Name | Purpose & Dictionary Configurations |
-| --- | --- |
-| `2Pack_2.0.0.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.0.2.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.0.5.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.0.6.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.0.7.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.0.8.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.0.9.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.1.0.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.1.1.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.1.2.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.1.3.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.1.4_OrdernarMenu.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.1.6_RequestType.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.1.7.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_2.1.8_UpdateReports.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.0.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.1_TablaIAccessControl.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.2.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.3.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.4_UpdateProcessParameter.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.5.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.6_Base.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.7_ProcesoIAttendanceImport.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_3.0.8.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_4.0.0.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_4.0.1_Mantenimiento.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `2Pack_4.0.2_UpdateProcessADDMissingDate.zip` | Metadata package containing Application Dictionary (AD) configurations. |
-| `CalloutFactory.xml` | Metadata package containing Application Dictionary (AD) configurations. |
-| `EventFactory.xml` | Metadata package containing Application Dictionary (AD) configurations. |
-| `FormFactory.xml` | Metadata package containing Application Dictionary (AD) configurations. |
-| `ModelFactory.xml` | Metadata package containing Application Dictionary (AD) configurations. |
-| `ProcessFactory.xml` | Metadata package containing Application Dictionary (AD) configurations. |
-| `xml-invoice.xml` | Metadata package containing Application Dictionary (AD) configurations. |
+These are the six packages currently included under the plugin's `META-INF` directory. Their historical package versions differ from the bundle version.
 
+| Package | Purpose and dictionary content |
+| --- | --- |
+| `2Pack_3.0.6_Base.zip` | Main attendance dictionary: shifts, groups, assignments, markings, attendance, devices, windows, menus and configuration. Includes `AddMissingDates`, `CalculateExtraHour`, `Create_C_BPartner_Shift`, `ImportAttendance`, `ImportAttendanceFromAttachment`, `ImportAttendanceFromAttachmentBioadmin`, `ImportAttendanceFromServerREST` and `ProcessAttendance`. |
+| `2Pack_3.0.7_ProcesoIAttendanceImport.zip` | Menu/process metadata for `ImportAttendanceFromI_Attendance`. |
+| `2Pack_3.0.8.zip` | Directory-import menu/process metadata. Its class is `com.cdsoftware.lirion.attendancemanager.process.ImportAttendanceFromFile`; the current Java package is `com.cdsoftware.lirion.attendance.process`. Check and correct the installed process class before use. |
+| `2Pack_4.0.0.zip` | Updates `Create_C_BPartner_Shift` process metadata. |
+| `2Pack_4.0.1_Mantenimiento.zip` | Maintenance SQL, menu changes and package-export metadata. |
+| `2Pack_4.0.2_UpdateProcessADDMissingDate.zip` | Updates `AddMissingDates` process parameters and references. |
+
+The remaining annotated process classes have no matching class entry in these bundled `PackOut.xml` files. Check existing dictionary registration or configure it explicitly before exposing them to users. `OSGI-INF/*.xml` files register components, and the test fragment's `xml-invoice.xml` is a test resource; neither belongs in the 2Pack inventory.
 
 ## Instructions
-1. Deploy the `com.cdsoftware.attendance` OSGi bundle in your iDempiere environment.
-2. Restart iDempiere and refresh OSGi bundles to register factories.
-3. Configure dictionary and role access rules as needed.
+
+1. Install the iDempiere 12 dependencies listed above and deploy the `com.cdsoftware.attendance` bundle using Java 17.
+2. Refresh or restart the OSGi runtime. The bundle uses `Incremental2PackActivator`; verify the import results for the packaged dictionary updates and resolve any import errors before use.
+3. Verify process class names, parameter definitions and role access in the installed dictionary, including the legacy class name documented above.
+4. Configure employees, shifts, dated assignments, calendars and the payroll concepts used by the selected process. Several legacy paths contain fixed record IDs; check their applicability to the target client.
+5. Select the importer matching the source format. Directory and REST imports can populate `I_Attendance`; run `ImportAttendanceFromI_Attendance` to convert staging records. Attachment and Bioadmin importers can create attendance lines directly.
+6. Review attendance lines, generate missing dates when needed, and run the appropriate payroll calculation process. Review the resulting payroll attributes before continuing payroll processing. `CompleteAttendance` is unfinished and is not part of this operational sequence.
+7. For REST import, review the implementation's authentication/context configuration before enabling it; `CDS_AT_BASE_URL` and device selection configure only part of the connection.
+
+## Extra Links
+
+- [iDempiere](https://www.idempiere.org/)
+- [Casa del Software](https://www.casadelsoftware.com/)
