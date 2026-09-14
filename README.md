@@ -1,19 +1,19 @@
 # com.cdsoftware.attendance
 
 - Copyright: 2026 https://www.casadelsoftware.com
-- Repository: https://bitbucket.org/cdsoftware/com.cdsoftware.attendance
+- Repository: https://github.com/lcdsoftware/com.cdsoftware.attendance
 - License: GPL 2
 
 ## Description
 
-iDempiere attendance management extension for employee shifts, biometric markings, daily attendance, missing dates, permissions, and payroll extra-hour calculation. It imports data from attachments, directories, interface tables, Bioadmin, ITAS, ZKTeco, and REST attendance devices.
+iDempiere attendance management extension for employee shifts, biometric markings, daily attendance, missing dates, permissions, and payroll extra-hour calculation. It imports data from attachments, directories, interface tables, Bioadmin, ITAS, ZKTeco, and a REST service. Importers populate attendance lines or staging records; payroll processes calculate absence and extra-hour attributes from existing attendance data.
 
 ## Contributors
 
-- 2024 Carlo Gonzalez <carlogonzalez@casadelsoftware.com>.
+- 2024–2026 Carlo Gonzalez <carlogonzalez@casadelsoftware.com>.
 - 2024 Eduardo Gil <egil@ghintech.com>.
 - 2024 Josian Ascanio <josianascanio@casadelsoftware.com>.
-- 2026 Angel Lara <angel@casadelsoftware.com>.
+- 2024–2026 Ángel Lara <angel@casadelsoftware.com>.
 
 ## Components
 
@@ -22,7 +22,7 @@ iDempiere attendance management extension for employee shifts, biometric marking
 
 ## Prerequisites
 
-- Java 11, commands `java` and `javac`.
+- Java 17, commands `java` and `javac`.
 - iDempiere 12
 - `joda-time` 2.10.8
 - `json` 20190722.0.0
@@ -35,195 +35,128 @@ iDempiere attendance management extension for employee shifts, biometric marking
 
 ```text
 com.cdsoftware.attendance/src
-└── com/cdsoftware/lirion/attendance
-    ├── base
-    ├── callout
-    │   ├── CheckBpPermission.java
-    │   └── SetQtyOfHours.java
-    ├── component
-    ├── model
-    │   ├── MGH_Shifts.java
-    │   ├── MGH_ShiftsLine.java
-    │   ├── MHR_Attendance.java
-    │   ├── MHR_AttendanceLine.java
-    │   ├── MHR_C_BPartnerShifts.java
-    │   ├── MIAttendance.java
-    │   ├── MMarking.java
-    │   └── ...
-    ├── process
-    │   ├── AddMissingDates.java
-    │   ├── CalculateExtraHour.java
-    │   ├── CompleteAttendance.java
-    │   ├── Create_C_BPartner_Shift.java
-    │   ├── ImportAttendance*.java
-    │   └── ProcessAttendance*.java
-    └── util
+└── com
+    └── cdsoftware
+        └── lirion
+            └── attendance
+                ├── base
+                │   ├── BundleInfo.java
+                │   ├── CustomCallout.java
+                │   ├── CustomEvent.java
+                │   ├── CustomForm.java
+                │   └── CustomProcess.java
+                ├── callout
+                │   ├── CheckBpPermission.java
+                │   └── SetQtyOfHours.java
+                ├── component
+                │   ├── CalloutFactory.java
+                │   ├── EventFactory.java
+                │   ├── FormFactory.java
+                │   ├── ModelFactory.java
+                │   └── ProcessFactory.java
+                ├── model
+                │   ├── I_GH_Shifts.java
+                │   ├── I_GH_ShiftsLine.java
+                │   ├── I_GH_Shifts_RG.java
+                │   ├── I_GH_Shifts_RG_Line.java
+                │   ├── I_HR_Attendance.java
+                │   ├── I_HR_AttendanceDevices.java
+                │   ├── I_HR_AttendanceLine.java
+                │   ├── I_HR_C_BPartnerShifts.java
+                │   ├── I_I_Attendance.java
+                │   ├── I_I_Marking.java
+                │   ├── MGH_Shifts.java
+                │   ├── MGH_ShiftsLine.java
+                │   ├── MHR_Attendance.java
+                │   ├── MHR_AttendanceLine.java
+                │   ├── MHR_C_BPartnerShifts.java
+                │   ├── MIAttendance.java
+                │   ├── MMarking.java
+                │   ├── X_GH_Shifts.java
+                │   ├── X_GH_ShiftsLine.java
+                │   ├── X_GH_Shifts_RG.java
+                │   ├── X_GH_Shifts_RG_Line.java
+                │   ├── X_HR_Attendance.java
+                │   ├── X_HR_AttendanceDevices.java
+                │   ├── X_HR_AttendanceLine.java
+                │   ├── X_HR_C_BPartnerShifts.java
+                │   ├── X_I_Attendance.java
+                │   └── X_I_Marking.java
+                ├── process
+                │   ├── AddMissingDates.java
+                │   ├── CalculateExtraHour.java
+                │   ├── CompleteAttendance.java
+                │   ├── Create_C_BPartner_Shift.java
+                │   ├── ImportAttendance.java
+                │   ├── ImportAttendanceBioadmin.java
+                │   ├── ImportAttendanceBioadminClkCode.java
+                │   ├── ImportAttendanceFromAttachment.java
+                │   ├── ImportAttendanceFromAttachmentBioadmin.java
+                │   ├── ImportAttendanceFromAttachmentITAS.java
+                │   ├── ImportAttendanceFromAttachmentZKTeco.java
+                │   ├── ImportAttendanceFromAttachmentzk.java
+                │   ├── ImportAttendanceFromFile.java
+                │   ├── ImportAttendanceFromI_Attendance.java
+                │   ├── ImportAttendanceFromServerREST.java
+                │   ├── ProcessAttendance.java
+                │   └── ProcessAttendanceBioadmin.java
+                └── util
+                    ├── FileTemplateBuilder.java
+                    ├── KeyValueLogger.java
+                    ├── SqlBuilder.java
+                    └── TimestampUtil.java
+com.cdsoftware.attendance.test/src
+└── com
+    └── cdsoftware
+        └── lirion
+            └── attendance
+                ├── test
+                │   ├── assertion
+                │   │   └── Annotations.java
+                │   └── util
+                │       ├── RandomTestUtil.java
+                │       └── ReflectionTestUtil.java
+                └── util
+                    ├── FileTemplateBuilderTest.java
+                    ├── KeyValueLoggerTest.java
+                    ├── SqlBuilderTest.java
+                    └── TimestampUtilTest.java
 ```
 
 ### Processes
 
-| Process | Class | Installed by 2Pack | Annotation | Purpose |
-| --- | --- | --- | --- | --- |
-| Add Missing Dates | `AddMissingDates` | Yes | Yes | Creates or deletes attendance rows for dates without markings. |
-| Calculate Extra Hour | `CalculateExtraHour` | Yes | Yes | Calculates payroll movements for worked intervals outside the shift. |
-| Complete Attendance | `CompleteAttendance` | No evidence in included 2Pack | Yes | Completes imported markings using shift and lost-time information. |
-| Assign Employee Shifts | `Create_C_BPartner_Shift` | Yes | Yes | Assigns a shift or rotating shift group to selected employees. |
-| Import Attendance | `ImportAttendance` | Yes | Yes | Creates a manual marking for an employee and date. |
-| Import Bioadmin Directory | `ImportAttendanceBioadmin` | No evidence in current 2Pack | Yes | Imports Bioadmin files from a configured directory. |
-| Import Bioadmin by Clock Code | `ImportAttendanceBioadminClkCode` | No evidence in current 2Pack | Yes | Imports Bioadmin data using device clock codes. |
-| Import Attached Attendance | `ImportAttendanceFromAttachment` | Yes | Yes | Imports a supported attendance attachment from the current record. |
-| Import Configurable Bioadmin Attachment | `ImportAttendanceFromAttachmentBioadmin` | Yes | Yes | Imports delimited Bioadmin files with configurable columns and formats. |
-| Import ITAS Attachment | `ImportAttendanceFromAttachmentITAS` | No evidence in current 2Pack | Yes | Imports ITAS attendance attachments. |
-| Import ZKTeco Attachment | `ImportAttendanceFromAttachmentZKTeco` | No evidence in current 2Pack | Yes | Imports ZKTeco attendance attachments with configurable date formats. |
-| Import Legacy ZK Attachment | `ImportAttendanceFromAttachmentzk` | No evidence in current 2Pack | Yes | Imports legacy ZK attachment formats. |
-| Import Attendance Directory | `ImportAttendanceFromFile` | Legacy class name in 2Pack | Yes | Imports CSV files from a server directory into the attendance interface. |
-| Import Attendance Interface | `ImportAttendanceFromI_Attendance` | Yes | Yes | Converts `I_Attendance` staging rows into attendance data. |
-| Import Attendance REST | `ImportAttendanceFromServerREST` | Yes | Yes | Authenticates with a configured REST device server and imports markings. |
-| Process Attendance | `ProcessAttendance` | Yes | Yes | Consolidates raw markings into attendance lines and extra-hour calculations. |
-| Process Bioadmin Attendance | `ProcessAttendanceBioadmin` | No evidence in current 2Pack | Yes | Processes Bioadmin markings into attendance lines. |
+Parameters below describe what the Java implementation reads and needs. Actual mandatory flags and defaults must also be checked in the installed Application Dictionary; annotations alone do not install a process or its parameters.
 
-#### `AddMissingDates`
+| Class | Purpose | Main parameters and requirements | Key logic and results |
+| --- | --- | --- | --- |
+| `AddMissingDates` | Generate missing attendance dates or delete empty data. | Generation: `HR_Attendance_ID` or both ends of the `DateFrom` range. Optional `delete` (default false); deletion uses the explicit date range. | Creates missing employee/day lines using employment and shift assignments. Delete mode removes zero-hour lines in the range and all line-less headers for the client, not just the selected header. |
+| `CalculateExtraHour` | Calculate payroll extra hours. | `AttendanceDate`, `C_BPartner_ID`, `Time1`, `Time2` and payroll/attendance context must be usable; also reads `AttendanceDate2`, `HR_Process_ID`, `HR_Attendance_ID`. | Classifies daytime, nighttime, rest-day and Sunday intervals and saves `HR_Attribute` amounts using predefined payroll concept search keys. Requires the corresponding shift and payroll setup. |
+| `CompleteAttendance` | Incomplete legacy clock-out estimation. | `Description` is interpreted as a numeric shift ID. | Queries `I_Marking` rows with null `Time2` and compares shift times. The implementation does not assign or save an estimated clock-out; it must not be treated as an operational completion process. |
+| `Create_C_BPartner_Shift` | Assign a shift to employees. | Usable `DateFrom`, `DateTo`, `GH_Shifts_ID`, and employee selection through `C_BPartner_ID` or `GH_Shifts_RG_ID`. `HR_Department_ID` is read but unused. | A supplied group replaces the single-employee selection. Creates dated `HR_C_BPartnerShifts` records and skips assignments detected by its existing-range check. |
+| `ImportAttendance` | Calculate lateness from legacy markings. | `MarkingDate` range is needed. `C_BPartner_ID` is read but not applied as a query filter. | Reads existing `I_Marking` rows, sums shift-hour differences by employee value, marks rows imported and creates absence-hour `HR_Attribute` records. It does not create a manual marking; payroll process and organization IDs are hardcoded. |
+| `ImportAttendanceBioadmin` | Import Bioadmin directory files. | No named parameters; requires files under `ATTENDANCE_FILE_LOCATION`. | Parses supported layouts, resolves employees and writes attendance headers/lines. Uses format-specific file handling and renames processed files. |
+| `ImportAttendanceBioadminClkCode` | Import Bioadmin using clock codes. | No named parameters; requires `ATTENDANCE_FILE_LOCATION` and employee clock-code mappings. | Resolves device clock codes to employees, creates attendance headers/lines and renames processed files. |
+| `ImportAttendanceFromAttachment` | Import the supported delimited attendance layout. | No named parameters; attachment required on the current record. | Parses employee/date/time columns and creates attendance headers/lines. The column layout is implemented in the importer. |
+| `ImportAttendanceFromAttachmentBioadmin` | Import configurable Bioadmin attachments. | Attachment required. Layout options: `DateTimeFormat`, `FormatType`, `HasHeader`, `bpIndex`, `dateIndex`, `HasHoursColumns`, `Hour1Index`, `Hour2Index`, `Hour3Index`, `Hour4Index`; use values matching the input file. | Supports timestamp rows and separate hour columns, groups employee/date entries, applies its configured time-block filtering and writes attendance lines. Includes file archival handling. |
+| `ImportAttendanceFromAttachmentITAS` | Import ITAS attachments. | No named parameters; supported ITAS attachment required. | Parses employee/date/time fields into attendance lines and reports created and ignored row counts. |
+| `ImportAttendanceFromAttachmentZKTeco` | Import ZKTeco attachments. | Attachment and valid `DateTimeFormat` / `DateFormat` required; optional `HasHeader` defaults to false. | Groups parsed employee/date entries into attendance lines with up to four time values. |
+| `ImportAttendanceFromAttachmentzk` | Import legacy ZK attachments. | No named parameters; supported attachment required. | Parses the legacy layout and populates attendance data using its interface and attendance models. |
+| `ImportAttendanceFromFile` | Stage server-directory CSV data. | `File_Directory` must identify a readable directory. | Reads CSV files and saves `I_Attendance` records for subsequent interface import. |
+| `ImportAttendanceFromI_Attendance` | Convert interface rows into attendance. | Optional `Device_Name` filter; eligible `I_Attendance` records required. | Creates attendance headers/lines, updates interface records and can create missing employee or device records as implemented. |
+| `ImportAttendanceFromServerREST` | Stage attendance downloaded through REST. | Optional `HR_AttendanceDevices_ID` selects the device serial; URL comes from `CDS_AT_BASE_URL` or a fallback. | Authenticates and saves remote rows into `I_Attendance`. Authentication and context values are hardcoded in this version; device metadata alone does not configure the connection. |
+| `ProcessAttendance` | Calculate absence and extra-hour payroll attributes. | Current attendance header with `DateFrom` and `DateTo`; optional `C_BPartner_ID`. | Deletes existing `HR_Attribute` records linked to that attendance/client (and employee when selected), then evaluates existing attendance lines against shifts, holidays and rest days. Writes absence attributes and invokes extra-hour calculation. |
+| `ProcessAttendanceBioadmin` | Evaluate time differences in Bioadmin attendance lines. | Current attendance header with a date range; optional `C_BPartner_ID`. | Evaluates existing lines against shifts and updates time differences. Payroll absence writes, prior-attribute deletion and the extra-hour invocation are commented out in the execution path; this variant does not generate those payroll results. |
 
-- **Type:** Server process on an attendance header.
-- **Parameters:** `HR_Attendance_ID`, `DateFrom`, date-to value, and delete mode.
-- **Validations:** Requires a valid attendance date range.
-- **Main logic:** Creates missing employee/date attendance rows or removes generated attendance data.
-- **Result:** Reports created or deleted attendance records.
+### Events
 
-#### `CalculateExtraHour`
-
-- **Type:** Payroll integration server process.
-- **Parameters:** `AttendanceDate`, `AttendanceDate2`, `C_BPartner_ID`, `Time1`, `Time2`, `HR_Process_ID`, and `HR_Attendance_ID`.
-- **Validations:** Requires shift configuration for the indicated day.
-- **Main logic:** Classifies worked time outside the assigned shift and creates the applicable extra-hour payroll values.
-- **Result:** Payroll extra-hour movements are calculated for the interval.
-
-#### `CompleteAttendance`
-
-- **Type:** Attendance completion process.
-- **Parameters:** Uses the current record and `Description` context.
-- **Validations:** Resolves the assigned shift before calculating lost time.
-- **Main logic:** Completes marking information and derives missing or lost work time.
-- **Result:** The attendance record is completed with shift-based values.
-
-#### `Create_C_BPartner_Shift`
-
-- **Type:** Employee shift assignment process.
-- **Parameters:** `DateFrom`, `DateTo`, employee selection, `GH_Shifts_ID`, `HR_Department_ID`, and `GH_Shifts_RG_ID`.
-- **Validations:** Requires at least one valid worker and a usable fixed or rotating shift selection.
-- **Main logic:** Selects employees directly or by department and creates validity-dated shift assignments.
-- **Result:** Employees receive fixed or rotating work schedules.
-
-#### `ImportAttendance`
-
-- **Type:** Manual marking process.
-- **Parameters:** `MarkingDate` and `C_BPartner_ID`.
-- **Validations:** Requires an employee and marking timestamp.
-- **Main logic:** Creates a raw attendance marking for the selected employee.
-- **Result:** One manual marking is available for attendance processing.
-
-#### `ImportAttendanceBioadmin`
-
-- **Type:** Directory import process.
-- **Parameters:** Uses the current attendance/device configuration record.
-- **Validations:** Requires valid Bioadmin files in the configured directory.
-- **Main logic:** Scans and parses Bioadmin files and creates raw markings.
-- **Result:** Valid files are imported and the process reports completion or an empty directory.
-
-#### `ImportAttendanceBioadminClkCode`
-
-- **Type:** Device-code directory import process.
-- **Parameters:** Uses the current attendance/device configuration record.
-- **Validations:** Validates source and destination directories and supported date values.
-- **Main logic:** Maps clock codes to employees, imports Bioadmin rows, and moves processed files when configured.
-- **Result:** Device-code markings are imported and archived.
-
-#### `ImportAttendanceFromAttachment`
-
-- **Type:** Attachment import process.
-- **Parameters:** Uses the current record attachment.
-- **Validations:** Requires an attachment and rejects rows whose employee cannot be resolved.
-- **Main logic:** Parses the supported delimited format and creates raw markings.
-- **Result:** Attached attendance rows become marking records.
-
-#### `ImportAttendanceFromAttachmentBioadmin`
-
-- **Type:** Configurable attachment import process.
-- **Parameters:** Date-time format, delimiter type, header flag, employee/date indexes, hour-column flag, and up to four hour indexes.
-- **Validations:** Requires an attachment and a supported, consistent separator.
-- **Main logic:** Parses configurable Bioadmin layouts and creates one or more markings per row.
-- **Result:** Flexible Bioadmin attachments are imported and optionally archived.
-
-#### `ImportAttendanceFromAttachmentITAS`
-
-- **Type:** ITAS attachment import process.
-- **Parameters:** Uses the current record attachment.
-- **Validations:** Requires an attached ITAS file and ignores unsupported rows.
-- **Main logic:** Parses employee and timestamp values from the ITAS layout.
-- **Result:** Returns total, created, and ignored line counts.
-
-#### `ImportAttendanceFromAttachmentZKTeco`
-
-- **Type:** ZKTeco attachment import process.
-- **Parameters:** `DateTimeFormat`, `DateFormat`, and `HasHeader`.
-- **Validations:** Requires an attachment and parseable employee/date values.
-- **Main logic:** Reads ZKTeco rows using the configured formats and creates raw markings.
-- **Result:** ZKTeco attachment data is imported.
-
-#### `ImportAttendanceFromAttachmentzk`
-
-- **Type:** Legacy ZK attachment import process.
-- **Parameters:** Uses the current record attachment and configured layout.
-- **Validations:** Requires an attachment and a resolvable employee for each accepted row.
-- **Main logic:** Parses legacy ZK formats and writes marking records.
-- **Result:** Legacy device exports are converted to attendance markings.
-
-#### `ImportAttendanceFromFile`
-
-- **Type:** Server-directory CSV import process.
-- **Parameters:** `File_Directory`.
-- **Validations:** Requires readable CSV files and reports rows that cannot be persisted.
-- **Main logic:** Reads directory files and writes attendance interface records.
-- **Result:** File data is staged for subsequent attendance import.
-
-#### `ImportAttendanceFromI_Attendance`
-
-- **Type:** Interface import process.
-- **Parameters:** Optional `Device_Name`.
-- **Validations:** Requires eligible records in `I_Attendance`.
-- **Main logic:** Filters and validates staging rows and converts them to attendance data.
-- **Result:** Interface records are imported and marked accordingly.
-
-#### `ImportAttendanceFromServerREST`
-
-- **Type:** REST integration process.
-- **Parameters:** `HR_AttendanceDevices_ID`.
-- **Validations:** Requires a configured device endpoint and successful authentication.
-- **Main logic:** Authenticates with the remote service, downloads markings, and stores local records.
-- **Result:** Remote device attendance is synchronized.
-
-#### `ProcessAttendance`
-
-- **Type:** Attendance consolidation process.
-- **Parameters:** Optional `C_BPartner_ID`; the current attendance header supplies the date range.
-- **Validations:** Requires header dates and raw markings in the selected period.
-- **Main logic:** Orders employee markings, resolves shifts, creates attendance lines, and invokes extra-hour calculation for eligible intervals.
-- **Result:** Raw markings become payroll-ready daily attendance lines.
-
-#### `ProcessAttendanceBioadmin`
-
-- **Type:** Bioadmin attendance consolidation process.
-- **Parameters:** Optional `C_BPartner_ID`; uses the current attendance header.
-- **Validations:** Requires Bioadmin markings for the selected date range.
-- **Main logic:** Groups imported markings by employee and date and creates attendance line intervals.
-- **Result:** Bioadmin markings become consolidated attendance records.
+`EventFactory` scans `com.cdsoftware.lirion.attendance.event`, but this source tree contains no concrete event handlers. Its OSGi descriptor registers the component; it is not a 2Pack.
 
 ### Callouts
 
-| Callout | Trigger | Window/table impact | User-visible result |
-| --- | --- | --- | --- |
-| `CheckBpPermission` | Request type, subtype, employee, or start date | Staff action request | Prevents more than three configured permission or tardiness requests for the employee in the same month. |
-| `SetQtyOfHours` | `Time1` through `Time4` | `I_Marking`, `GH_ShiftsLine`, `HR_AttendanceLine` | Calculates both work intervals and total hours, including intervals crossing midnight. |
+| Class | Target fields | Business rule and UI impact |
+| --- | --- | --- |
+| `CheckBpPermission` | Annotation targets `M_Request`: `CDS_R_RequestTypeDetails_ID`, `R_RequestType_ID`, `C_BPartner_ID`, `CDS_StartDate`. Queries `R_Request`. | Returns `SubtypeOver3PerMonth` when the matching permission or tardiness count reaches three. Uses hardcoded type/subtype UUIDs and compares month numbers without a year filter. Verify the annotation target against the actual request table before relying on activation. |
+| `SetQtyOfHours` | `I_Marking`, `GH_ShiftsLine`, `HR_AttendanceLine`: `Time1` through `Time4`. | Calculates `QtyOfHours1`, `QtyOfHours2` and, when available, `TotalQtyOfHours`. Adds 24 hours for a negative interval to handle midnight crossing. |
 
 ### Models
 
@@ -234,23 +167,30 @@ com.cdsoftware.attendance/src
 - `I_Attendance` and `I_Marking` provide staging and raw-marking storage for imports.
 - `HR_AttendanceDevices` stores biometric or REST device connection metadata.
 
-### 2Pack Content
+### Application Dictionary Metadata (2Pack)
 
-- `2Pack_3.0.6_Base.zip` installs the main attendance dictionary: shifts, rotating groups, employee assignments, markings, attendance headers and lines, devices, windows, tabs, menus, references, and core processes.
-- `2Pack_3.0.7_ProcesoIAttendanceImport.zip` installs the interface attendance import process.
-- `2Pack_3.0.8.zip` installs attendance directory import metadata; its recorded class uses a legacy package name.
-- `2Pack_4.0.0.zip` updates employee shift assignment.
-- `2Pack_4.0.1_Mantenimiento.zip` contains maintenance updates to columns and menus.
-- `2Pack_4.0.2_UpdateProcessADDMissingDate.zip` updates Add Missing Dates parameters and references.
+These are the six packages currently included under the plugin's `META-INF` directory. Their historical package versions differ from the bundle version.
+
+| Package | Purpose and dictionary content |
+| --- | --- |
+| `2Pack_3.0.6_Base.zip` | Main attendance dictionary: shifts, groups, assignments, markings, attendance, devices, windows, menus and configuration. Includes `AddMissingDates`, `CalculateExtraHour`, `Create_C_BPartner_Shift`, `ImportAttendance`, `ImportAttendanceFromAttachment`, `ImportAttendanceFromAttachmentBioadmin`, `ImportAttendanceFromServerREST` and `ProcessAttendance`. |
+| `2Pack_3.0.7_ProcesoIAttendanceImport.zip` | Menu/process metadata for `ImportAttendanceFromI_Attendance`. |
+| `2Pack_3.0.8.zip` | Directory-import menu/process metadata. Its class is `com.cdsoftware.lirion.attendancemanager.process.ImportAttendanceFromFile`; the current Java package is `com.cdsoftware.lirion.attendance.process`. Check and correct the installed process class before use. |
+| `2Pack_4.0.0.zip` | Updates `Create_C_BPartner_Shift` process metadata. |
+| `2Pack_4.0.1_Mantenimiento.zip` | Maintenance SQL, menu changes and package-export metadata. |
+| `2Pack_4.0.2_UpdateProcessADDMissingDate.zip` | Updates `AddMissingDates` process parameters and references. |
+
+The remaining annotated process classes have no matching class entry in these bundled `PackOut.xml` files. Check existing dictionary registration or configure it explicitly before exposing them to users. `OSGI-INF/*.xml` files register components, and the test fragment's `xml-invoice.xml` is a test resource; neither belongs in the 2Pack inventory.
 
 ## Instructions
 
-1. Install `com.cdsoftware.payroll` and `com.cdsoftware.pluginconfig` for iDempiere 12.
-2. Deploy `com.cdsoftware.attendance` and refresh or restart the OSGi runtime.
-3. Verify the incremental 2Pack packages under `META-INF` were imported in version order.
-4. Configure shifts, rotating shift groups, employee assignments, request limits, attendance devices, directories, and import formats.
-5. Import or synchronize raw markings, run attendance processing, review generated lines, and then calculate or transfer extra hours to payroll.
-6. Grant roles access to the attendance windows, menus, reports, and processes.
+1. Install the iDempiere 12 dependencies listed above and deploy the `com.cdsoftware.attendance` bundle using Java 17.
+2. Refresh or restart the OSGi runtime. The bundle uses `Incremental2PackActivator`; verify the import results for the packaged dictionary updates and resolve any import errors before use.
+3. Verify process class names, parameter definitions and role access in the installed dictionary, including the legacy class name documented above.
+4. Configure employees, shifts, dated assignments, calendars and the payroll concepts used by the selected process. Several legacy paths contain fixed record IDs; check their applicability to the target client.
+5. Select the importer matching the source format. Directory and REST imports can populate `I_Attendance`; run `ImportAttendanceFromI_Attendance` to convert staging records. Attachment and Bioadmin importers can create attendance lines directly.
+6. Review attendance lines, generate missing dates when needed, and run the appropriate payroll calculation process. Review the resulting payroll attributes before continuing payroll processing. `CompleteAttendance` is unfinished and is not part of this operational sequence.
+7. For REST import, review the implementation's authentication/context configuration before enabling it; `CDS_AT_BASE_URL` and device selection configure only part of the connection.
 
 ## Extra Links
 
