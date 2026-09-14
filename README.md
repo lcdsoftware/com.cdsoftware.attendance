@@ -24,8 +24,6 @@ iDempiere attendance management extension for employee shifts, biometric marking
 
 - Java 17, commands `java` and `javac`.
 - iDempiere 12
-- `joda-time` 2.10.8
-- `json` 20190722.0.0
 - `com.cdsoftware.payroll` 12.0.0
 - `com.cdsoftware.pluginconfig` 12.x
 
