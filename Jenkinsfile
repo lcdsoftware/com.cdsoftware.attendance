@@ -1,5 +1,5 @@
 pipeline {
-    agent none
+    agent any 
     environment {
         PLUGIN_NAME = "com.cdsoftware.attendance"
         PLUGIN_NAME2 = "com.cdsoftware.payroll"
@@ -7,39 +7,46 @@ pipeline {
         PLUGIN_NAME4 = "org.globalqss.idempiere.LCO.detailednames"
         PLUGIN_NAME5 = "com.cdsoftware.location"
         PLUGIN_NAME6 = "com.cdsoftware.pluginconfig" 
-        IDEMPIERE_VERSION = "10.0.0"
-        
+        IDEMPIERE_VERSION = "12.0.0"
     }
     stages {
+        stage('Checkout Dependencies') {
+            steps {
+                // Todas las dependencias usando HTTPS y tu credencial de GitHub App ('jenkins')
+                dir ('d2') {
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.payroll.git']])                            
+                }
+                dir ('d3') {
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.base.git']])              
+                }  
+                dir ('d4') {
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/globalqss-idempiere-lco.git']])              
+                }
+                 dir ('d5') {
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.location.git']])              
+                }
+                 dir ('d6') {
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.pluginconfig.git']])              
+                }                  
+                dir('target-platform') {
+                    git branch: '12.0', url: 'https://github.com/ingeint/idempiere-target-platform-plugin.git'
+                }
+            }
+        }
+        
         stage('Compile') {
             agent {
                 docker {
-                    image 'idempiereofficial/idempiere:source-release-10.0'
-                    args '-u root:root'               
-                  }
+                    image 'carl0jgr/idempiere-source-builder:12'
+                    args '--entrypoint=\'\' -u root:root -v /var/jenkins_home/.m2:/root/.m2'
+                    reuseNode true 
+                }
             }
             steps {
-                             
-                dir ('d2'){
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.payroll.git']])                           
-                }
-                dir ('d3'){
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.base.git']])             
-                }  
-                dir ('d4'){
-                    git branch: '10.0.0', url: 'https://github.com/egil0902/globalqss-idempiere-lco.git'             
-                }  
-                 dir ('d5'){
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.location.git']])             
-                }
-                 dir ('d6'){
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.pluginconfig.git']])             
-                } 
                 dir('target-platform') {
-                    git branch: '10', url: 'https://github.com/ingeint/idempiere-target-platform-plugin.git'
-					sh './plugin-builder build ../${PLUGIN_NAME} ../${PLUGIN_NAME}.test ../d2/${PLUGIN_NAME2} ../d3/${PLUGIN_NAME3} ../d4/${PLUGIN_NAME4} ../d5/${PLUGIN_NAME5} ../d6/${PLUGIN_NAME6}'
+                    sh './plugin-builder build ../${PLUGIN_NAME}  ../d2/${PLUGIN_NAME2} ../d3/${PLUGIN_NAME3} ../d4/${PLUGIN_NAME4} ../d5/${PLUGIN_NAME5} ../d6/${PLUGIN_NAME6}'
                     archiveArtifacts artifacts: "target/${PLUGIN_NAME}-${IDEMPIERE_VERSION}.${BUILD_NUMBER}.jar", fingerprint: true
-                    sh 'rm -rf target ../${PLUGIN_NAME}/target ../${PLUGIN_NAME}.test/target'
+                    sh 'rm -rf target ../${PLUGIN_NAME}/target'
                 }
             }
         }

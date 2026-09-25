@@ -1,3 +1,27 @@
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ *                                                                     *
+ * Contributors:                                                       *
+ * - Casa del Software                                                 *
+ * ********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -24,14 +48,32 @@ import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 import com.cdsoftware.lirion.attendance.model.MIAttendance;
 
+/**
+ * Server process to import attendance records from a ZK machine CSV file attached to the record.
+ * This class supports both a simple import (readAttendance) into an intermediate table (MIAttendance)
+ * and a direct import (writeAttendance) into attendance lines (MHR_AttendanceLine).
+ * 
+ * CSV structure (Tab or Comma separated depending on method):
+ * [0] BPartner Value
+ * [1] Marking Timestamp (dd/MM/yyyy HH:mm)
+ * 
+ * @author Casa del Software
+ * @version 1.0
+ */
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromAttachmentzk extends SvrProcess{
 
 
 	private int RECORD_ID;
+	/**
+	 * Reads the process parameters. This process primarily relies on the 
+	 * current Record ID to locate the attachment.
+	 * 
+	 * Parameters are checked but none are explicitly required by this implementation 
+	 * as it uses the context's Record ID.
+	 */
 	@Override
 	protected void prepare() {
-		// TODO Auto-generated method stub
 		ProcessInfoParameter[] parameters = getParameter();
 		for (ProcessInfoParameter para: parameters)
 		{
@@ -43,11 +85,24 @@ public class ImportAttendanceFromAttachmentzk extends SvrProcess{
 		RECORD_ID = getRecord_ID();
 	}
 
+	/**
+	 * Executes the direct import into attendance lines by calling writeAttendance().
+	 * 
+	 * @return null or process message.
+	 * @throws Exception if processing fails.
+	 */
 	@Override
 	protected String doIt() throws Exception {
 		writeAttendance();
 		return null;
 	}
+	/**
+	 * Reads the attached file (tab-separated) and populates the intermediate 
+	 * table MIAttendance.
+	 * 
+	 * @return null.
+	 * @throws Exception if an error occurs during file reading.
+	 */
 	public String readAttendance() throws Exception {
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
 		//StringBuilder sql = new StringBuilder ("DELETE I_AttendanceLine ")
@@ -99,6 +154,13 @@ public class ImportAttendanceFromAttachmentzk extends SvrProcess{
 		return null;
 	}
 
+	/**
+	 * Reads the attached file (comma-separated) and populates the 
+	 * MHR_AttendanceLine table directly.
+	 * 
+	 * @return error message if employee is not found, otherwise null.
+	 * @throws Exception if an error occurs during processing.
+	 */
 	public String writeAttendance() throws Exception{
 		// TODO Auto-generated method stub
 		//MBPartner bp = new MBPartner(getCtx(), C_BPartner_ID, get_TrxName());

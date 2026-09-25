@@ -1,3 +1,27 @@
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ *                                                                     *
+ * Contributors:                                                       *
+ * - Casa del Software                                                 *
+ * ********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -30,6 +54,15 @@ import com.cdsoftware.lirion.attendance.model.MGH_ShiftsLine;
 import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 
+/**
+ * Server process to import attendance markings from a ZKTeco CSV file attached to the record.
+ * It identifies Business Partners by matching their code against HR_ClockCode, taxid, or value.
+ * The process sorts markings by employee and time, then reconciles them into up to 4 potential 
+ * clock-in/out times per day.
+ * 
+ * @author Casa del Software
+ * @version 1.0
+ */
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
     StringBuilder usersNotFoundList = new StringBuilder();
@@ -38,6 +71,14 @@ public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
     boolean p_HasHeader = false;
     private int RECORD_ID;
 
+    /**
+     * Reads the process parameters required for CSV parsing.
+     * 
+     * Parameters:
+     * - DateTimeFormat: Format string for parsing timestamps (e.g., "MM/dd/yy hh:mm a").
+     * - DateFormat: Format string for identifying the day part.
+     * - HasHeader: Boolean flag to skip the first line of the CSV.
+     */
     @Override
     protected void prepare() {
         ProcessInfoParameter[] parameters = getParameter();
@@ -55,11 +96,24 @@ public class ImportAttendanceFromAttachmentZKTeco extends SvrProcess {
         RECORD_ID = getRecord_ID();
     }
 
+    /**
+     * Entry point for the process execution. Triggers the attendance writing logic.
+     * 
+     * @return null or process message.
+     * @throws Exception if processing fails.
+     */
     @Override
     protected String doIt() throws Exception {
         return writeAttendance();
     }
 
+    /**
+     * Main logic to read the attachment, parse the CSV, sort markings, and 
+     * create/update attendance lines.
+     * 
+     * @return status message.
+     * @throws Exception if an error occurs during file reading or DB operations.
+     */
     public String writeAttendance() throws Exception {
         MHR_Attendance attendance = new MHR_Attendance(getCtx(), RECORD_ID, get_TrxName());
         MAttachment attachment = attendance.getAttachment();

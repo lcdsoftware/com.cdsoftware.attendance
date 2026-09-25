@@ -1,3 +1,27 @@
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ *                                                                     *
+ * Contributors:                                                       *
+ * - Casa del Software                                                 *
+ **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -31,23 +55,26 @@ import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 import com.cdsoftware.lirion.attendance.model.MMarking;
 
 /**
- * Proceso para importar archivo de marcaciones desde una ubicación en el servidor
- * la ruta de los archivos esta indicada por la variable del sistema ATTENDANCE_FILE_LOCATION
- * estructura del csv
- * [0]	dump
- * [1]	codigo tercero
- * [2]	fecha marcacion
- * @author angel
- *
+ * Process to import attendance markings from a CSV file located on the server.
+ * The file location is defined by the system configuration "ATTENDANCE_FILE_LOCATION".
+ * It expects a specific CSV structure for Bioadmin devices.
+ * 
+ * CSV structure:
+ * [0] Employee Code (TaxID)
+ * [1] Marking Timestamp
+ * 
+ * @author Casa del Software
  */
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceBioadmin extends SvrProcess{
 
 	private String ATTENDANCE_FILE_LOCATION="";
 	private int RECORD_ID=0;
+    /**
+     * Prepares the process by reading parameters and initializing the record ID.
+     */
 	@Override
 	protected void prepare() {
-		// TODO Auto-generated method stub
 		ProcessInfoParameter[] parameters = getParameter();
 		for (ProcessInfoParameter para: parameters)
 		{
@@ -59,6 +86,12 @@ public class ImportAttendanceBioadmin extends SvrProcess{
 		RECORD_ID = getRecord_ID();
 	}
 
+    /**
+     * Searches for attendance files in the configured directory and processes each one.
+     * 
+     * @return Process termination message.
+     * @throws Exception if processing fails.
+     */
 	@Override
 	protected String doIt() throws Exception {
 		ATTENDANCE_FILE_LOCATION = MSysConfig.getValue("ATTENDANCE_FILE_LOCATION", "/home/admin1/txt/", getAD_Client_ID());
@@ -86,8 +119,13 @@ public class ImportAttendanceBioadmin extends SvrProcess{
 		return "Proceso Terminado";
 	}
 
+    /**
+     * Legacy method to write attendance from a fixed "Marcacion.csv" file.
+     * 
+     * @return null or status message.
+     * @throws Exception if an error occurs.
+     */
 	public String writeAttendance() throws Exception{
-		// TODO Auto-generated method stub
 		//MBPartner bp = new MBPartner(getCtx(), C_BPartner_ID, get_TrxName());
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
 		StringBuilder sql = new StringBuilder ("DELETE FROM HR_AttendanceLine ")
@@ -256,8 +294,15 @@ public class ImportAttendanceBioadmin extends SvrProcess{
 		return null;
 	}
 
+    /**
+     * Processes an attendance CSV file from the given path.
+     * It sorts markings by employee and date, then creates HR_AttendanceLine records.
+     * 
+     * @param pathName Absolute path to the CSV file.
+     * @return null or error message.
+     * @throws Exception if an error occurs.
+     */
 	public String writeAttendance(String pathName) throws Exception{
-		// TODO Auto-generated method stub
 		//MBPartner bp = new MBPartner(getCtx(), C_BPartner_ID, get_TrxName());
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
 		StringBuilder sql = new StringBuilder ("DELETE FROM HR_AttendanceLine ")
@@ -453,8 +498,13 @@ public class ImportAttendanceBioadmin extends SvrProcess{
 		return null;
 	}
 	
+    /**
+     * Calculates the difference between shift hours and actual worked hours for a marking.
+     * 
+     * @param attendance The marking record.
+     * @return Positive difference representing lateness, or zero.
+     */
 	protected BigDecimal getDifference(MMarking attendance) {
-		// TODO Auto-generated method stub
 		String WeekDay = getWeekDayValue(attendance.getWeekDayStr());
 		if (WeekDay.equals(null))
 			return BigDecimal.ZERO;
@@ -464,8 +514,14 @@ public class ImportAttendanceBioadmin extends SvrProcess{
 		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
 	}
 
+    /**
+     * Calculates the difference between shift hours and actual worked hours for an attendance line.
+     * 
+     * @param attendance The attendance line record.
+     * @param Shift_ID The shift ID to compare against.
+     * @return Positive difference representing lateness, or zero.
+     */
 	protected BigDecimal getDifference(MHR_AttendanceLine attendance,int Shift_ID ) {
-		// TODO Auto-generated method stub
 		String WeekDay = getWeekDayValue(attendance.getWeekDay());
 		if (WeekDay.equals(null))
 			return BigDecimal.ZERO;
@@ -475,6 +531,12 @@ public class ImportAttendanceBioadmin extends SvrProcess{
 		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
 	}
 
+    /**
+     * Converts a Date to its corresponding WeekDay reference value.
+     * 
+     * @param WeekDayStr The date to convert.
+     * @return The reference value for the day of the week, or null if not found.
+     */
 	protected String getWeekDayValue(Date WeekDayStr) {
 
 		Timestamp time = new Timestamp(WeekDayStr.getTime());
@@ -492,6 +554,12 @@ public class ImportAttendanceBioadmin extends SvrProcess{
 
 	}
 	
+    /**
+     * Converts a string day name to its corresponding WeekDay reference value.
+     * 
+     * @param WeekDayStr The day name (English).
+     * @return The reference value for the day of the week, or null if not found.
+     */
 	protected String getWeekDayValue(String WeekDayStr) {
 
 		List<MRefList> reflist = new Query(getCtx(), MRefList.Table_Name, "AD_Reference_ID=?",get_TrxName()).setParameters(167).list();

@@ -1,3 +1,27 @@
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ *                                                                     *
+ * Contributors:                                                       *
+ * - Casa del Software                                                 *
+ **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -39,23 +63,32 @@ import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 import com.cdsoftware.lirion.attendance.model.MMarking;
 
 /**
- * Proceso para importar archivo de marcaciones desde una ubicación en el servidor
- * la ruta de los archivos esta indicada por la variable del sistema ATTENDANCE_FILE_LOCATION
- * estructura del csv
- * [0]	dump
- * [1]	codigo tercero
- * [2]	fecha marcacion
- * @author angel
- *
+ * Server process to import attendance markings from a CSV file using HR Clock Code.
+ * The process scans a configured directory for CSV files, parses them, identifies
+ * employees by their hr_clockcode, and generates attendance lines in the system.
+ * 
+ * Business Logic:
+ * - Reads file location from "ATTENDANCE_FILE_LOCATION" system configuration.
+ * - Iterates through all files in the directory.
+ * - Parses CSV entries: [0] Employee Clock Code, [1] Marking Timestamp.
+ * - Identifies BPartners using hr_clockcode in C_BPartner table.
+ * - Groups multiple markings per day for each employee into a single attendance line (Time1 to Time4).
+ * - Moves processed files to a "procesado" subdirectory.
+ * 
+ * @author Casa del Software
  */
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceBioadminClkCode extends SvrProcess{
 
 	private String ATTENDANCE_FILE_LOCATION="";
 	private int RECORD_ID=0;
+
+	/**
+	 * Prepares the process by initializing the Record_ID from context.
+	 * This process does not use external parameters; it relies on the header record it is invoked from.
+	 */
 	@Override
 	protected void prepare() {
-		// TODO Auto-generated method stub
 		ProcessInfoParameter[] parameters = getParameter();
 		for (ProcessInfoParameter para: parameters)
 		{
@@ -67,6 +100,12 @@ public class ImportAttendanceBioadminClkCode extends SvrProcess{
 		RECORD_ID = getRecord_ID();
 	}
 
+	/**
+	 * Executes the import logic by scanning the configured directory for files.
+	 * 
+	 * @return A termination message indicating the process has finished.
+	 * @throws Exception if the directory configuration is missing or file operations fail.
+	 */
 	@Override
 	protected String doIt() throws Exception {
 		ATTENDANCE_FILE_LOCATION = MSysConfig.getValue("ATTENDANCE_FILE_LOCATION", "/home/admin1/txt/", getAD_Client_ID());
@@ -93,8 +132,14 @@ public class ImportAttendanceBioadminClkCode extends SvrProcess{
 		return "Proceso Terminado";
 	}
 
+	/**
+	 * Legacy method to write attendance from a fixed "Marcacion.csv" file.
+	 * This method is retained for backward compatibility with fixed-filename ingestion.
+	 * 
+	 * @return null if successful, or an error status.
+	 * @throws Exception if file access or database persistence fails.
+	 */
 	public String writeAttendance() throws Exception{
-		// TODO Auto-generated method stub
 		//MBPartner bp = new MBPartner(getCtx(), C_BPartner_ID, get_TrxName());
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
 		StringBuilder sql = new StringBuilder ("DELETE FROM HR_AttendanceLine ")
@@ -284,8 +329,23 @@ public class ImportAttendanceBioadminClkCode extends SvrProcess{
 		return null;
 	}
 
+	/**
+	 * Processes an attendance CSV file from the given path.
+	 * It identifies the BPartner by hr_clockcode, sorts markings by employee and date, 
+	 * and creates MHR_AttendanceLine records.
+	 * 
+	 * Logic:
+	 * - Deletes existing attendance lines for the current record.
+	 * - Reads and sorts markings using a custom comparator that handles date parsing via Joda-Time.
+	 * - Aggregates multiple markings into Time1, Time2, Time3, and Time4 for split-shift support.
+	 * - Calculates QtyOfHours1 and QtyOfHours2.
+	 * - Moves the file to a "procesado" folder after successful completion.
+	 * 
+	 * @param pathName Absolute path to the CSV file to process.
+	 * @return null if successful, or an error message if no valid lines are found.
+	 * @throws Exception if an error occurs during parsing or database operations.
+	 */
 	public String writeAttendance(String pathName) throws Exception{
-		// TODO Auto-generated method stub
 		//MBPartner bp = new MBPartner(getCtx(), C_BPartner_ID, get_TrxName());
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
 		StringBuilder sql = new StringBuilder ("DELETE FROM HR_AttendanceLine ")
@@ -547,6 +607,13 @@ public class ImportAttendanceBioadminClkCode extends SvrProcess{
 		return null;
 	}
 	
+	/**
+	 * Calculates the difference between the shift's expected hours and actual attendance hours,
+	 * taking into account the configured tolerance.
+	 * 
+	 * @param attendance The marking record containing actual hours.
+	 * @return The difference in hours (positive values only), or ZERO if no difference exists.
+	 */
 	protected BigDecimal getDifference(MMarking attendance) {
 		// TODO Auto-generated method stub
 		String WeekDay = getWeekDayValue(attendance.getWeekDayStr());
@@ -558,6 +625,13 @@ public class ImportAttendanceBioadminClkCode extends SvrProcess{
 		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
 	}
 
+	/**
+	 * Calculates the difference between a specific shift's expected hours and the attendance line's hours.
+	 * 
+	 * @param attendance The attendance line containing actual hours.
+	 * @param Shift_ID The ID of the shift configuration to compare against.
+	 * @return The difference in hours (positive values only), or ZERO if no difference exists.
+	 */
 	protected BigDecimal getDifference(MHR_AttendanceLine attendance,int Shift_ID ) {
 		// TODO Auto-generated method stub
 		String WeekDay = getWeekDayValue(attendance.getWeekDay());
@@ -569,6 +643,12 @@ public class ImportAttendanceBioadminClkCode extends SvrProcess{
 		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
 	}
 
+	/**
+	 * Translates a Date object into a weekday reference value using iDempiere List Reference 167.
+	 * 
+	 * @param WeekDayStr The date to translate.
+	 * @return The reference value (e.g., "1" for Sunday/Monday depending on config) or null if not found.
+	 */
 	protected String getWeekDayValue(Date WeekDayStr) {
 
 		Timestamp time = new Timestamp(WeekDayStr.getTime());
@@ -586,6 +666,12 @@ public class ImportAttendanceBioadminClkCode extends SvrProcess{
 
 	}
 	
+	/**
+	 * Translates a weekday name string into a reference value using iDempiere List Reference 167.
+	 * 
+	 * @param WeekDayStr The name of the weekday in English.
+	 * @return The reference value or null if not found.
+	 */
 	protected String getWeekDayValue(String WeekDayStr) {
 
 		List<MRefList> reflist = new Query(getCtx(), MRefList.Table_Name, "AD_Reference_ID=?",get_TrxName()).setParameters(167).list();
@@ -598,7 +684,14 @@ public class ImportAttendanceBioadminClkCode extends SvrProcess{
 		return null;
 
 	}	
-	// Método para intentar analizar la fecha con múltiples formatos usando Joda-Time
+	/**
+	 * Attempts to parse a date string using multiple common formats.
+	 * Uses Joda-Time for robust date-time manipulation.
+	 * 
+	 * @param dateStr The date string to parse.
+	 * @return A DateTime object representing the parsed timestamp.
+	 * @throws IllegalArgumentException if the date string does not match any supported format.
+	 */
     private DateTime parseDate(String dateStr) {
         List<DateTimeFormatter> dateFormats = Arrays.asList(
             DateTimeFormat.forPattern("MM/dd/yyyy h:mm a").withLocale(Locale.US),

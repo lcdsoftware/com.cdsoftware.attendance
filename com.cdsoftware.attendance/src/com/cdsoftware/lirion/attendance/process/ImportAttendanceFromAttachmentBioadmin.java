@@ -1,3 +1,24 @@
+/**********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -76,6 +97,21 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 	private static final int DEFAULT_ATTENDANCE_TIME_BLOCK_MINUTES = 1;
 	private static final String ATTENDANCE_TIME_BLOCK_SYSCONFIG = "CDS_AttendanceTimeBlock";
 
+	/**
+	 * Reads process parameters from the iDempiere Application Dictionary.
+	 * 
+	 * Parameters:
+	 * - DateTimeFormat: Format string for parsing dates and times (e.g., "yyyy-MM-dd HH:mm:ss").
+	 * - FormatType: CSV delimiter type (C=Comma, T=Tab).
+	 * - HasHeader: Whether the first line of the CSV contains column headers.
+	 * - bpIndex: 0-based column index for the Business Partner identifier.
+	 * - dateIndex: 0-based column index for the marking date/time.
+	 * - HasHoursColumns: If true, the CSV contains specific columns for multiple marking times.
+	 * - Hour1Index: Column index for the first marking time.
+	 * - Hour2Index: Column index for the second marking time.
+	 * - Hour3Index: Column index for the third marking time.
+	 * - Hour4Index: Column index for the fourth marking time.
+	 */
 	@Override
 	protected void prepare() {
 		ProcessInfoParameter[] parameters = getParameter();
@@ -108,6 +144,13 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		RECORD_ID = getRecord_ID();
 	}
 
+	/**
+	 * Main execution logic. Routes to either attachment-based or server-based
+	 * import depending on the record context.
+	 * 
+	 * @return summary message of the process execution.
+	 * @throws Exception if any error occurs during processing.
+	 */
 	@Override
 	protected String doIt() throws Exception {
 		usersNotFoundList = new StringBuilder();
@@ -491,6 +534,13 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		return saveAttendanceLineSafely(al, employed.getC_BPartner_ID(), parsedDate, attendance, newT1, newT2, newT3, newT4);
 	}
 
+	/**
+	 * Retrieves the iDempiere Reference List value for a given date's day of the week.
+	 * Maps the Java DayOfWeek to the values in Reference ID 167.
+	 * 
+	 * @param WeekDayStr The date to evaluate.
+	 * @return The string value corresponding to the day of the week (e.g., "1" for Monday).
+	 */
 	protected String getWeekDayValue(Date WeekDayStr) {
 		Timestamp time = new Timestamp(WeekDayStr.getTime());
 		LocalDateTime attendancedateaux = time.toLocalDateTime();
@@ -505,6 +555,9 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		return null;
 	}
 
+	/**
+	 * Model class for CSV line data
+	 */
 	protected class attendanceCsvLine {
 
 		public attendanceCsvLine(String string, Date parsedDateTime) {
@@ -578,6 +631,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		public Timestamp time4;
 	}
 
+	/**
+	 * Calculate difference in hours based on shift configuration
+	 * @param attendanceline record to check
+	 * @param pShift shift configuration
+	 * @return difference in hours
+	 */
 	protected BigDecimal getDifference(MHR_AttendanceLine attendanceline, MGH_Shifts pShift) {
 		String WeekDay = attendanceline.getWeekDay();
 		if (WeekDay == null) {
@@ -617,7 +676,6 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		shiftTime3 = shiftTime3.plusMinutes(shiftline.getRestTolerance().longValue());
 
 		Duration duration = Duration.between(shiftTime1WithoutTolerance, attendanceTime1);
-
 		double diffTime1 = duration.toMinutes();
 		if (diffTime1 <= shiftline.getTolerance().doubleValue()) {
 			duration = Duration.between(shiftTime1, attendanceTime1);
@@ -673,6 +731,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		return diference.compareTo(BigDecimal.ZERO) > 0 ? diference : BigDecimal.ZERO;
 	}
 
+	/**
+	 * Prepare time for calculation by combining attendance date with shift time
+	 * @param attendanceDate date of attendance
+	 * @param time1 time component
+	 * @return combined LocalDateTime
+	 */
 	protected LocalDateTime prepareTime(Timestamp attendanceDate, Timestamp time1) {
 		if (attendanceDate == null || time1 == null) {
 			return null;
@@ -684,6 +748,11 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		return time;
 	}
 
+	/**
+	 * Format time field to standard 1970-01-01 base for comparison
+	 * @param dateTime source date time
+	 * @return formatted timestamp
+	 */
 	protected Timestamp formatTimeField(Date dateTime) {
 		if (dateTime == null) {
 			return null;
@@ -698,6 +767,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		return new Timestamp(newDate.getTime());
 	}
 
+	/**
+	 * Extract only date component (00:00:00)
+	 * @param fecha source date
+	 * @param formato simple date format
+	 * @return date without time
+	 */
 	protected static Date extraerFecha(Date fecha, SimpleDateFormat formato) {
 		try {
 			Calendar cal = Calendar.getInstance();
@@ -743,6 +818,10 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 				al.getTime1(), al.getTime2(), al.getTime3(), al.getTime4());
 	}
 
+	/**
+	 * Recalculate working hours for a line
+	 * @param al attendance line
+	 */
 	private void recalculateCollapsedHours(MHR_AttendanceLine al) {
 		BigDecimal qty1 = Env.ZERO;
 		BigDecimal qty2 = Env.ZERO;
@@ -777,6 +856,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		al.setTotalQtyOfHours(total);
 	}
 
+	/**
+	 * Calculate hours between two timestamps
+	 * @param from start
+	 * @param to end
+	 * @return hours as BigDecimal
+	 */
 	private BigDecimal calculateHoursBetween(Timestamp from, Timestamp to) {
 		if (from == null || to == null) {
 			return Env.ZERO;
@@ -818,6 +903,12 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 		return Duration.ofMinutes(minutes).toMillis();
 	}
 
+	/**
+	 * Filter out markings that are too close in time for the same employee/day
+	 * @param source list of markings
+	 * @param dateTimeFormat format for date extraction
+	 * @return filtered list
+	 */
 	private List<attendanceCsvLine> filterNearbyMarkings(List<attendanceCsvLine> source, SimpleDateFormat dateTimeFormat) {
 		List<attendanceCsvLine> filtered = new ArrayList<>();
 		attendanceCsvLine lastAccepted = null;
@@ -911,6 +1002,11 @@ public class ImportAttendanceFromAttachmentBioadmin extends SvrProcess {
 				.first();
 	}
 
+	/**
+	 * Check if the exception is a database unique violation
+	 * @param t throwable
+	 * @return true if it's a unique violation
+	 */
 	private boolean isUniqueViolation(Throwable t) {
 		while (t != null) {
 			if (t instanceof SQLException) {
