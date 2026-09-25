@@ -1,27 +1,3 @@
-/**********************************************************************
- * This file is part of iDempiere ERP Open Source                      *
- * http://www.idempiere.org                                            *
- *                                                                     *
- * Copyright (C) Contributors                                          *
- *                                                                     *
- * This program is free software; you can redistribute it and/or       *
- * modify it under the terms of the GNU General Public License         *
- * as published by the Free Software Foundation; either version 2      *
- * of the License, or (at your option) any later version.              *
- *                                                                     *
- * This program is distributed in the hope that it will be useful,     *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
- * GNU General Public License for more details.                        *
- *                                                                     *
- * You should have received a copy of the GNU General Public License   *
- * along with this program; if not, write to the Free Software         *
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
- * MA 02110-1301, USA.                                                 *
- *                                                                     *
- * Contributors:                                                       *
- * - Casa del Software                                                 *
- **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.math.BigDecimal;
@@ -39,27 +15,16 @@ import com.cdsoftware.lirion.payroll.model.MHRAttribute;
 import com.cdsoftware.lirion.payroll.model.MHRConcept;
 import com.cdsoftware.lirion.payroll.model.MHRProcess;
 
-/**
- * Process to import attendance markings and calculate late hours as payroll attributes.
- * It compares actual worked hours against shift configurations to determine absences or lateness.
- * 
- * @author Casa del Software
- */
+
 @org.adempiere.base.annotation.Process
 public class ImportAttendance extends SvrProcess{
  
 	private Timestamp MarkingDateFrom;
 	private Timestamp MarkingDateTo;
 	private int C_BPartner_ID;
-    /**
-     * Reads the process parameters required for attendance import.
-     * 
-     * Parameters:
-     * - MarkingDate: Date range for the markings to process.
-     * - C_BPartner_ID: Filter by a specific Business Partner.
-     */
 	@Override
 	protected void prepare() {
+		// TODO Auto-generated method stub
 		ProcessInfoParameter[] parameters = getParameter();
 		for (ProcessInfoParameter para: parameters)
 		{
@@ -76,15 +41,9 @@ public class ImportAttendance extends SvrProcess{
 		}
 	}
 
-    /**
-     * Iterates over attendance markings, calculates late hours by comparing with shifts,
-     * and inserts results as payroll attributes.
-     * 
-     * @return null or status message.
-     * @throws Exception if processing fails.
-     */
 	@Override
 	protected String doIt() throws Exception {
+		// TODO Auto-generated method stub
 		//MBPartner bp = new MBPartner(getCtx(), C_BPartner_ID, get_TrxName());
 				
 		List<MMarking> listattendance = new Query(getCtx(),MMarking.Table_Name,"MarkingDate between ? and ? AND QtyOfHours1 is not null ",get_TrxName()).setParameters(MarkingDateFrom,MarkingDateTo).setOrderBy("Value").list();
@@ -107,14 +66,8 @@ public class ImportAttendance extends SvrProcess{
 		return null;
 	}
 
-    /**
-     * Calculates the difference between shift hours and actual worked hours,
-     * considering a tolerance threshold.
-     * 
-     * @param attendance The marking record.
-     * @return Positive difference representing lateness, or zero.
-     */
 	protected BigDecimal getDifference(MMarking attendance) {
+		// TODO Auto-generated method stub
 		String WeekDay = attendance.getWeekDayValue();
 		if (WeekDay.equals(null))
 			return BigDecimal.ZERO;
@@ -124,13 +77,8 @@ public class ImportAttendance extends SvrProcess{
 		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
 	}
 
-    /**
-     * Inserts a calculated late hour amount as a payroll attribute (absence quantity).
-     * 
-     * @param value Business Partner search key (Value).
-     * @param lateHour Calculated total late hours.
-     */
 	protected void insertLateHour(String value, BigDecimal lateHour) {
+		// TODO Auto-generated method stub
 		MBPartner employed = new Query(getCtx(), MBPartner.Table_Name, "Value=?", get_TrxName()).setParameters(value).first();
 		MHRProcess payrollprocess= new MHRProcess(getCtx(), 1000002, get_TrxName());
 		MHRAttribute attribute = new MHRAttribute(getCtx(), 0, get_TrxName());

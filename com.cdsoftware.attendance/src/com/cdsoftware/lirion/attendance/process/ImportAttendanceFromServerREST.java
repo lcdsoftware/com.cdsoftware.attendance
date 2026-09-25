@@ -1,27 +1,3 @@
-/**********************************************************************
- * This file is part of iDempiere ERP Open Source                      *
- * http://www.idempiere.org                                            *
- *                                                                     *
- * Copyright (C) Contributors                                          *
- *                                                                     *
- * This program is free software; you can redistribute it and/or       *
- * modify it under the terms of the GNU General Public License         *
- * as published by the Free Software Foundation; either version 2      *
- * of the License, or (at your option) any later version.              *
- *                                                                     *
- * This program is distributed in the hope that it will be useful,     *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
- * GNU General Public License for more details.                        *
- *                                                                     *
- * You should have received a copy of the GNU General Public License   *
- * along with this program; if not, write to the Free Software         *
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
- * MA 02110-1301, USA.                                                 *
- *                                                                     *
- * Contributors:                                                       *
- * - Casa del Software                                                 *
- **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -49,16 +25,19 @@ import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
 import com.cdsoftware.lirion.payroll.model.MHRProcess;
 
 /**
- * Server process to import attendance markings from a central server's I_Attendance 
- * table to a local I_Attendance table using the iDempiere REST API.
- * The remote server URL is defined by the CDS_AT_BASE_URL system configuration.
+ * Proceso para importar marcaciones desde la tabla I_Attendance de un servidor central 
+ * a la tabla I_Attendance de un servidor local.
+ * La dirección del servidor Remoto esta indicada por la variable de sistema CDS_AT_BASE_URL
  * 
- * @author Casa del Software
- * @version 1.0
+ * 
+ * 
+ * 
+ * @author Carlo
+ *
  */
+
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromServerREST extends SvrProcess {
-
     private String DEVICE_SN;
     private String BASE_URL;
     private String p_BASE_URL;
@@ -67,12 +46,6 @@ public class ImportAttendanceFromServerREST extends SvrProcess {
     private String token;
     private int p_Attendance_Device = 0;
    
-    /**
-     * Reads the process parameters and initializes the REST base URL.
-     * 
-     * Parameters:
-     * - HR_AttendanceDevices_ID: Target device to synchronize markings from.
-     */
     @Override
     protected void prepare() {
     	ProcessInfoParameter[] para = getParameter();
@@ -97,13 +70,6 @@ public class ImportAttendanceFromServerREST extends SvrProcess {
         BASE_URL = p_BASE_URL + "/api/v1";
     }
 
-    /**
-     * Executes the REST synchronization. Authenticates, queries the remote server, 
-     * and persists records locally.
-     * 
-     * @return summary message.
-     * @throws Exception if connection or processing fails.
-     */
     @Override
     protected String doIt() throws Exception {
         // Borrar todos los datos existentes en la tabla i_attendance
@@ -131,20 +97,11 @@ public class ImportAttendanceFromServerREST extends SvrProcess {
         return "Proceso completado satisfactoriamente.";
     }
 
-    /**
-     * Clears the local I_Attendance table. Currently disabled in doIt().
-     */
     private void clearAttendanceTable() {
         String sql = "DELETE FROM i_attendance";
         DB.executeUpdate(sql, get_TrxName());
     }
 
-    /**
-     * Authenticates against the remote server's /auth/tokens endpoint 
-     * and retrieves the Bearer token.
-     * 
-     * @throws Exception if authentication fails.
-     */
     private void authenticate() throws Exception {
         String authUrl = BASE_URL + "/auth/tokens";
         HttpURLConnection connection = (HttpURLConnection) new URL(authUrl).openConnection();
@@ -194,12 +151,6 @@ public class ImportAttendanceFromServerREST extends SvrProcess {
         }
     }
 
-    /**
-     * Queries the remote server for I_Attendance records filtered by Device_SN.
-     * 
-     * @param deviceSn the serial number of the device to query.
-     * @return JSONArray of remote records or null on failure.
-     */
     private JSONArray queryRemoteAttendanceData(String deviceSn) {
         try {
         	String url = BASE_URL + "/models/I_Attendance?$filter=Device_SN+eq+'" + DEVICE_SN + "'";
@@ -252,11 +203,6 @@ public class ImportAttendanceFromServerREST extends SvrProcess {
         }
     }
 
-    /**
-     * Iterates through the remote JSON array and triggers local saving.
-     * 
-     * @param jsonArray records received from the remote server.
-     */
     private void processAndSaveData(JSONArray jsonArray) {
         try {
             for (int i = 0; i < jsonArray.length(); i++) {
@@ -269,11 +215,6 @@ public class ImportAttendanceFromServerREST extends SvrProcess {
         }
     }
 
-    /**
-     * Maps a remote JSON record to a local X_I_Attendance model and saves it.
-     * 
-     * @param jsonObject single remote attendance record.
-     */
     private void saveAttendanceData(JSONObject jsonObject) {
         try {
             System.out.println("Processing JSONObject: " + jsonObject.toString()); // Depurar contenido de JSONObject
@@ -306,12 +247,6 @@ public class ImportAttendanceFromServerREST extends SvrProcess {
     }
 
    
-    /**
-     * Parses a date string from the REST response into a Timestamp.
-     * 
-     * @param dateStr date string in ISO-8601 format (yyyy-MM-dd'T'HH:mm:ss'Z').
-     * @return the resulting Timestamp or null if parsing fails.
-     */
     private Timestamp parseTimestamp(String dateStr) {
         try {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");

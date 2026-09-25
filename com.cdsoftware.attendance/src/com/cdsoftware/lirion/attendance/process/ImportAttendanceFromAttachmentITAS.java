@@ -1,27 +1,3 @@
-/**********************************************************************
- * This file is part of iDempiere ERP Open Source                      *
- * http://www.idempiere.org                                            *
- *                                                                     *
- * Copyright (C) Contributors                                          *
- *                                                                     *
- * This program is free software; you can redistribute it and/or       *
- * modify it under the terms of the GNU General Public License         *
- * as published by the Free Software Foundation; either version 2      *
- * of the License, or (at your option) any later version.              *
- *                                                                     *
- * This program is distributed in the hope that it will be useful,     *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
- * GNU General Public License for more details.                        *
- *                                                                     *
- * You should have received a copy of the GNU General Public License   *
- * along with this program; if not, write to the Free Software         *
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
- * MA 02110-1301, USA.                                                 *
- *                                                                     *
- * Contributors:                                                       *
- * - Casa del Software                                                 *
- **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.io.BufferedReader;
@@ -48,62 +24,30 @@ import com.cdsoftware.lirion.attendance.model.MGH_ShiftsLine;
 import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 import com.cdsoftware.lirion.attendance.model.MMarking;
-
 /**
- * Server process to import attendance records from a CSV file in ITAS format attached to the current record.
- * It identifies Business Partners by their TaxID (Employee Code), parses multiple marking columns
- * (Time1 through Time4), and creates or updates MHR_AttendanceLine records.
- * 
- * ITAS CSV Structure (Semicolon separated, ISO-8859-1):
- * [2]  Employee TaxID (Search Key)
- * [12] Attendance Date (yyyy-MM-dd)
- * [17] Time1 (HH:mm:ss)
- * [19] Time2 (HH:mm:ss)
- * [21] Time3 (HH:mm:ss)
- * [23] Time4 (HH:mm:ss)
- * 
- * Special Handling:
- * - Ignores lines where both Time1 and Time2 are "No Marcó.".
- * - Uses ISO-8859-1 encoding for reading.
- * - Optionally completes missing times using MGH_ShiftsLine if specified.
- * 
- * @author Ángel Lara
- * @version 1.0
+ * Process to import attendance from a csv ITAS file
+ * @author angel
+ *
  */
+
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromAttachmentITAS extends SvrProcess{
 
-	/** Attendance Header ID */
-	private int RECORD_ID;
 
-	/**
-	 * Reads the process parameters. This process primarily relies on the 
-	 * current Record ID (HR_Attendance_ID) to locate the attachment.
-	 * 
-	 * This process does not currently read additional parameters from 
-	 * the process info.
-	 */
+	private int RECORD_ID;
 	@Override
 	protected void prepare() {
 		ProcessInfoParameter[] parameters = getParameter();
 		for (ProcessInfoParameter para: parameters)
 		{
-			// No external parameters used
+			String name = para.getParameterName();
+			if (para.getParameter() == null)
+				;
+
 		}
 		RECORD_ID = getRecord_ID();
 	}
 
-	/**
-	 * Processes the attached CSV file line by line. It identifies the employee
-	 * using their TaxID, parses the marking times (Time1 through Time4), 
-	 * and creates or updates attendance lines for the current HR_Attendance record.
-	 * 
-	 * The process uses ISO-8859-1 encoding to handle special characters and
-	 * semicolon as the field separator.
-	 * 
-	 * @return Success message including counts of created and ignored lines.
-	 * @throws Exception if processing fails or if required records are missing.
-	 */
 	@Override
 	protected String doIt() throws Exception {
 		// TODO Auto-generated method stub
@@ -284,13 +228,6 @@ public class ImportAttendanceFromAttachmentITAS extends SvrProcess{
 		return null;
 	}
 
-	/**
-	 * Calculates the difference between the expected shift hours and the 
-	 * actual attendance marking hours.
-	 * 
-	 * @param attendance The marking record containing actual work hours.
-	 * @return The difference in hours (positive values only) after applying tolerance.
-	 */
 	protected BigDecimal getDifference(MMarking attendance) {
 		// TODO Auto-generated method stub
 		String WeekDay = getWeekDayValue(attendance.getWeekDayStr());
@@ -303,13 +240,6 @@ public class ImportAttendanceFromAttachmentITAS extends SvrProcess{
 	}
 
 
-	/**
-	 * Translates a weekday name string into a reference value using 
-	 * iDempiere List Reference 167.
-	 * 
-	 * @param WeekDayStr The name of the weekday (e.g., "Lunes").
-	 * @return The reference value (e.g., "1") or null if not found.
-	 */
 	protected String getWeekDayValue(String WeekDayStr) {
 
 		List<MRefList> reflist = new Query(getCtx(), MRefList.Table_Name, "AD_Reference_ID=?",get_TrxName()).setParameters(167).list();
@@ -323,13 +253,6 @@ public class ImportAttendanceFromAttachmentITAS extends SvrProcess{
 
 	}
 
-	/**
-	 * Retrieves the iDempiere Reference List value for a given date's day of the week.
-	 * Maps the Java DayOfWeek to the values in Reference ID 167.
-	 * 
-	 * @param WeekDayStr The date to evaluate.
-	 * @return The reference value (e.g., "1") or null if not found.
-	 */
 	protected String getWeekDayValue(Date WeekDayStr) {
 
 		Timestamp time = new Timestamp(WeekDayStr.getTime());
