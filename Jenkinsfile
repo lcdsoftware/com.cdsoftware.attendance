@@ -14,7 +14,7 @@ pipeline {
             steps {
                 // Todas las dependencias usando HTTPS y tu credencial de GitHub App ('jenkins')
                 dir ('d2') {
-                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:ghintech/ghintech-idempiere-payroll.git']])                            
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/ghintech-idempiere-payroll.git']])                            
                 }
                 dir ('d3') {
                     checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.base.git']])              
