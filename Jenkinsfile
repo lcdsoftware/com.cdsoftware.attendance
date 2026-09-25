@@ -14,14 +14,24 @@ pipeline {
             steps {
                 // Todas las dependencias usando HTTPS y tu credencial de GitHub App ('jenkins')
                 dir ('d2') {
-                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/ghintech-idempiere-payroll.git']])   
-sh '''
-    echo "=== ESTRUCTURA DE d2 ==="
-    find d2 -maxdepth 3 -type f -name pom.xml -print
-
-    echo "=== DIRECTORIOS DE d2 ==="
-    find d2 -maxdepth 2 -type d -print
-'''
+                    checkout scmGit(
+                        branches: [[name: '*/12.0.0']],
+                        userRemoteConfigs: [[
+                            credentialsId: 'jenkins',
+                            url: 'https://github.com/lcdsoftware/ghintech-idempiere-payroll.git'
+                        ]]
+                    )
+                
+                    sh '''
+                        echo "=== PWD ==="
+                        pwd
+                
+                        echo "=== POM.XML ==="
+                        find . -maxdepth 4 -type f -name pom.xml -print
+                
+                        echo "=== DIRECTORIOS ==="
+                        find . -maxdepth 3 -type d -print
+                    '''
                 }
                 dir ('d3') {
                     checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.base.git']])              
