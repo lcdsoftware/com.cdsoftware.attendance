@@ -2,7 +2,7 @@ pipeline {
     agent any 
     environment {
         PLUGIN_NAME = "com.cdsoftware.attendance"
-        PLUGIN_NAME2 = "ghintech-idempiere-payroll""
+        PLUGIN_NAME2 = "ghintech-idempiere-payroll"
         PLUGIN_NAME3 = "com.cdsoftware.base"
         PLUGIN_NAME4 = "org.globalqss.idempiere.LCO.detailednames"
         PLUGIN_NAME5 = "com.cdsoftware.location"
