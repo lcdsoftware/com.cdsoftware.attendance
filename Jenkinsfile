@@ -12,21 +12,21 @@ pipeline {
     stages {
         stage('Checkout Dependencies') {
             steps {
-                // Todas las descargas ocurren en el anfitrión de Jenkins donde la llave SSH funciona perfectamente
+                // Todas las dependencias usando HTTPS y tu credencial de GitHub App ('jenkins')
                 dir ('d2') {
-                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@github.com:lcdsoftware/com.cdsoftware.payroll.git']])                            
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.payroll.git']])                            
                 }
                 dir ('d3') {
-                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@github.com:lcdsoftware/com.cdsoftware.base.git']])              
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.base.git']])              
                 }  
                 dir ('d4') {
-                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@github.com:lcdsoftware/globalqss-idempiere-lco.git']])              
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/globalqss-idempiere-lco.git']])              
                 }
                  dir ('d5') {
-                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@github.com:lcdsoftware/com.cdsoftware.location.git']])              
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.location.git']])              
                 }
                  dir ('d6') {
-                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@github.com:lcdsoftware/com.cdsoftware.pluginconfig.git']])              
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.pluginconfig.git']])              
                 }                  
                 dir('target-platform') {
                     git branch: '12.0', url: 'https://github.com/ingeint/idempiere-target-platform-plugin.git'
@@ -39,7 +39,7 @@ pipeline {
                 docker {
                     image 'carl0jgr/idempiere-source-builder:12'
                     args '--entrypoint=\'\' -u root:root -v /var/jenkins_home/.m2:/root/.m2'
-                    reuseNode true // Le dice a Docker que use los archivos que acabamos de descargar arriba
+                    reuseNode true 
                 }
             }
             steps {
