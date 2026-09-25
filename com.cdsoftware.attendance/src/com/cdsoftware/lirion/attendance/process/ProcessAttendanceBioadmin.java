@@ -1,27 +1,3 @@
-/**********************************************************************
- * This file is part of iDempiere ERP Open Source                      *
- * http://www.idempiere.org                                            *
- *                                                                     *
- * Copyright (C) Contributors                                          *
- *                                                                     *
- * This program is free software; you can redistribute it and/or       *
- * modify it under the terms of the GNU General Public License         *
- * as published by the Free Software Foundation; either version 2      *
- * of the License, or (at your option) any later version.              *
- *                                                                     *
- * This program is distributed in the hope that it will be useful,     *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
- * GNU General Public License for more details.                        *
- *                                                                     *
- * You should have received a copy of the GNU General Public License   *
- * along with this program; if not, write to the Free Software         *
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
- * MA 02110-1301, USA.                                                 *
- *                                                                     *
- * Contributors:                                                       *
- * - Casa del Software                                                 *
- **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.math.BigDecimal;
@@ -46,20 +22,6 @@ import com.cdsoftware.lirion.attendance.model.MGH_ShiftsLine;
 import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 
-/**
- * Server process for calculating late hours and absences based on attendance marking data.
- * Reconciles actual markings in {@link MHR_AttendanceLine} against defined shifts in 
- * {@link MGH_Shifts} and {@link MGH_ShiftsLine}.
- * 
- * Logic Highlights:
- * - Filtered by an optional Business Partner.
- * - Accounts for national holidays (X_C_NonBusinessDay).
- * - Identifies rest days per shift configuration.
- * - Calculates late hours using tolerances for entry, exit, and lunch breaks.
- * - Determines absence days by comparing expected work days vs. recorded markings.
- * 
- * @author Casa del Software
- */
 @org.adempiere.base.annotation.Process
 public class ProcessAttendanceBioadmin extends SvrProcess{
 
@@ -67,14 +29,9 @@ public class ProcessAttendanceBioadmin extends SvrProcess{
 	private int RECORD_ID;
 	private int p_C_BPartner_ID=0;
 	MHR_Attendance attendance;
-	/**
-	 * Reads process parameters from the process info.
-	 * 
-	 * Parameters:
-	 * - C_BPartner_ID: Optional Business Partner filter (integer).
-	 */
 	@Override
 	protected void prepare() {
+		// TODO Auto-generated method stub
 		ProcessInfoParameter[] parameters = getParameter();
 		for (ProcessInfoParameter para: parameters)
 		{
@@ -88,22 +45,6 @@ public class ProcessAttendanceBioadmin extends SvrProcess{
 
 	}
 
-	/**
-	 * Main execution logic for calculating late hours and absences.
-	 * 
-	 * Workflow:
-	 * 1. Loads the parent Attendance record (MHR_Attendance).
-	 * 2. Queries all attendance lines within the period.
-	 * 3. Identifies non-business days (holidays).
-	 * 4. Iterates through attendance lines per employee.
-	 * 5. Identifies shift configuration for each employee.
-	 * 6. Checks for rest days.
-	 * 7. Calls {@link #getDifference(MHR_AttendanceLine, MGH_Shifts)} to compute late minutes.
-	 * 8. Aggregates results and calculates missing days (absences).
-	 * 
-	 * @return null or diagnostic message if no markings are found.
-	 * @throws Exception if data retrieval or calculation fails.
-	 */
 	@Override
 	protected String doIt() throws Exception {
 		// TODO Auto-generated method stub
@@ -216,13 +157,6 @@ public class ProcessAttendanceBioadmin extends SvrProcess{
 		return null;
 	}
 
-	/**
-	 * Checks if a given day of the week is a rest day according to the shift configuration.
-	 * 
-	 * @param dayOfWeek The day of the week to check.
-	 * @param shift The employee's shift configuration.
-	 * @return true if it is a rest day, false otherwise.
-	 */
 	private boolean isRestDay(DayOfWeek dayOfWeek,MGH_Shifts shift) {
 		// TODO Auto-generated method stub
 		List<MGH_ShiftsLine> sl = new Query(getCtx(), MGH_ShiftsLine.Table_Name, "RestDay='Y'", get_TrxName()).list();
@@ -237,21 +171,6 @@ public class ProcessAttendanceBioadmin extends SvrProcess{
 
 
 
-	/**
-	 * Calculates the late hour difference by comparing required shift times 
-	 * against actual marking timestamps.
-	 * 
-	 * Calculation Logic:
-	 * - Retrieves the Shift Line for the specific weekday.
-	 * - Applies tolerance minutes (from shift config) to shift times.
-	 * - Compares shift entry/exit and lunch entry/exit (Time 1-4).
-	 * - If markings are within tolerance, difference is zero.
-	 * - Updates {@link MHR_AttendanceLine} with calculated minute differences.
-	 * 
-	 * @param attendanceline The marking record to evaluate.
-	 * @param pShift The employee's assigned shift configuration.
-	 * @return The total late hour difference (as decimal hours).
-	 */
 	protected BigDecimal getDifference(MHR_AttendanceLine attendanceline, MGH_Shifts pShift) {
 		// TODO Auto-generated method stub
 		String WeekDay = attendanceline.getWeekDay();
@@ -425,15 +344,6 @@ public class ProcessAttendanceBioadmin extends SvrProcess{
 
 		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
 	}
-	/**
-	 * Calculates the difference and identifies extra hours.
-	 * If the marking exceeds shift boundaries beyond a certain threshold, 
-	 * it triggers the extra hour calculation process.
-	 * 
-	 * @param attendanceline The attendance record containing markings.
-	 * @param pShift The employee's shift configuration.
-	 * @return The calculated difference as a BigDecimal.
-	 */
 	protected BigDecimal getDifferenceHE(MHR_AttendanceLine attendanceline, MGH_Shifts pShift) {
 		// TODO Auto-generated method stub
 		String WeekDay = attendanceline.getWeekDay();
@@ -611,15 +521,8 @@ public class ProcessAttendanceBioadmin extends SvrProcess{
 		return (diference.compareTo(BigDecimal.ZERO)>0)? diference: BigDecimal.ZERO;
 	}
 
-	/**
-	 * Combines an attendance date with a relative time timestamp into a LocalDateTime.
-	 * Ensures the resulting time represents the marking on the specific date.
-	 * 
-	 * @param attendanceDate The base date.
-	 * @param time1 The relative time to extract hours/minutes from.
-	 * @return A LocalDateTime combining both components, or null if inputs are missing.
-	 */
 	private LocalDateTime prepareTime(Timestamp attendanceDate, Timestamp time1) {
+		// TODO Auto-generated method stub
 		if(attendanceDate==null)
 			return null;
 		if(time1==null)

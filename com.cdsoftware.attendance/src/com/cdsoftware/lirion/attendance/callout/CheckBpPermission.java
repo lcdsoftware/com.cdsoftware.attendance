@@ -1,27 +1,3 @@
-/**********************************************************************
- * This file is part of iDempiere ERP Open Source                      *
- * http://www.idempiere.org                                            *
- *                                                                     *
- * Copyright (C) Contributors                                          *
- *                                                                     *
- * This program is free software; you can redistribute it and/or       *
- * modify it under the terms of the GNU General Public License         *
- * as published by the Free Software Foundation; either version 2      *
- * of the License, or (at your option) any later version.              *
- *                                                                     *
- * This program is distributed in the hope that it will be useful,     *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
- * GNU General Public License for more details.                        *
- *                                                                     *
- * You should have received a copy of the GNU General Public License   *
- * along with this program; if not, write to the Free Software         *
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
- * MA 02110-1301, USA.                                                 *
- *                                                                     *
- * Contributors:                                                       *
- * - Casa del Software                                                 *
- **********************************************************************/
 package com.cdsoftware.lirion.attendance.callout;
 
 import java.sql.Timestamp;
@@ -38,28 +14,9 @@ import org.compiere.util.Msg;
 
 import com.cdsoftware.lirion.attendance.base.CustomCallout;
 
-/**
- * Callout used to validate Business Partner permissions and tardiness limits.
- * It ensures that a Business Partner does not exceed the maximum allowed requests (3) 
- * per month for specific request types, specifically 'Permisos' (Permissions) and 'Tardanzas' (Tardiness).
- * 
- * Triggered by: M_Request.CDS_R_RequestTypeDetails_ID, R_RequestType_ID, C_BPartner_ID, CDS_StartDate
- */
 @Callout(tableName = "M_Request", columnName = {"CDS_R_RequestTypeDetails_ID","R_RequestType_ID","C_BPartner_ID","CDS_StartDate"})
 public class CheckBpPermission extends CustomCallout{
 	protected CLogger			log = CLogger.getCLogger (getClass());
-
-	/**
-	 * Validates the number of requests for the Business Partner in the selected month.
-	 * 
-	 * @param ctx context
-	 * @param WindowNo window no
-	 * @param mTab grid tab
-	 * @param mField grid field
-	 * @param value new value
-	 * @param oldValue old value
-	 * @return error message if limit exceeded, otherwise null
-	 */
 	@Override
 	public String start(Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value, Object oldValue) {
 		log.warning("TEST");

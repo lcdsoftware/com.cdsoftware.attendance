@@ -1,27 +1,3 @@
-/**********************************************************************
- * This file is part of iDempiere ERP Open Source                      *
- * http://www.idempiere.org                                            *
- *                                                                     *
- * Copyright (C) Contributors                                          *
- *                                                                     *
- * This program is free software; you can redistribute it and/or       *
- * modify it under the terms of the GNU General Public License         *
- * as published by the Free Software Foundation; either version 2      *
- * of the License, or (at your option) any later version.              *
- *                                                                     *
- * This program is distributed in the hope that it will be useful,     *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
- * GNU General Public License for more details.                        *
- *                                                                     *
- * You should have received a copy of the GNU General Public License   *
- * along with this program; if not, write to the Free Software         *
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
- * MA 02110-1301, USA.                                                 *
- *                                                                     *
- * Contributors:                                                       *
- * - Casa del Software                                                 *
- **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.math.BigDecimal;
@@ -50,25 +26,15 @@ import com.cdsoftware.lirion.attendance.model.X_HR_AttendanceDevices;
 import com.cdsoftware.lirion.attendance.model.X_I_Attendance;
 
 /**
- * Server process to import attendance records from the I_Attendance interface table.
- * It groups markings by employee and date, creating attendance headers and lines.
- * It also handles automatic creation of missing employees (BPartners) and devices
- * in HR_AttendanceDevices.
+ * Proceso para importar marcaciones desde la tabla I_Attendance
  * 
- * @author Casa del Software
- * @version 1.0
+ * @author Carlo
  */
 @org.adempiere.base.annotation.Process
 public class ImportAttendanceFromI_Attendance extends CustomProcess {
 
 	private String pDevice_Name = "";
 
-	/**
-	 * Reads the process parameters.
-	 * 
-	 * Parameters:
-	 * - Device_Name: Optional filter to import only from a specific device.
-	 */
 	@Override
 	protected void prepare() {
 		ProcessInfoParameter[] parameters = getParameter();
@@ -80,30 +46,18 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 		}
 	}
 
-	/**
-	 * Executes the import process logic.
-	 * 
-	 * @return success message
-	 * @throws Exception if an error occurs during processing
-	 */
 	@Override
 	protected String doIt() throws Exception {
 		writeAttendance();
-		return "Process Completed";
+		return "Proceso Terminado";
 	}
 
-	/**
-	 * Main logic for processing attendance markings from I_Attendance.
-	 * 
-	 * @return error message if no records are found, otherwise null
-	 * @throws Exception if an error occurs
-	 */
 	public String writeAttendance() throws Exception {
 		StringBuilder clientCheck = new StringBuilder(" AND AD_Client_ID=").append(getAD_Client_ID());
 
 		MHR_Attendance attendance = new MHR_Attendance(getCtx(), 0, get_TrxName());
 
-		// Retrieve attendance records based on pDevice_Name filter
+		// Obtener los registros de asistencia según pDevice_Name
 		List<X_I_Attendance> attendanceList;
 		if (pDevice_Name.isEmpty()) {
 			attendanceList = new Query(getCtx(), X_I_Attendance.Table_Name, "Processed!='Y'", get_TrxName())  
@@ -121,7 +75,7 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 		}
 
 		if (attendanceList.isEmpty()) {
-			return "@Error@No records found in I_Attendance table";
+			return "@Error@No hay registros en la tabla I_Attendance";
 		} else {
 			attendance.saveEx();
 		}
@@ -165,15 +119,15 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 			if (j == 0 || startDate.compareTo(parsedDate) > 0)
 				startDate = parsedDate;
 
-			// Retrieve employee by HR_ClockCode
+			// Obtener el empleado por HR_ClockCode
 			int employedID = DB.getSQLValueEx(get_TrxName(), 
 					"SELECT C_BPartner_ID FROM C_BPartner WHERE REPLACE(trim(COALESCE(HR_ClockCode,taxid,value)), '-', '')= REPLACE(trim(?), '-', '')", 
 					hrClockCode);
 
 			if (employedID <= 0) {
-				log.severe("Employee not found by HR_ClockCode or Tax_ID: " + hrClockCode);
-				log.warning("@Error@ Employee not found: " + hrClockCode +", Proceeding to create a new one");
-				//continue; // Skip this record, avoids marking as processed
+				log.severe("No se encuentra el empleado por HR_ClockCode ni por Tax_ID: " + hrClockCode);
+				log.warning("@Error@ No se encuentra el empleado " + hrClockCode +", Se procederá a agregarlo");
+				//continue; // Saltar este registro, evita marcar como procesado
 				MBPartner newBpartner = MBPartner.getTemplate(getCtx(), this.getAD_Client_ID());
                 newBpartner.setName(record.getFull_Name()); 
                 newBpartner.setValue(record.getHR_ClockCode());
@@ -190,7 +144,7 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
                 commitEx();
 			}
 
-			// Verify that Device_Name and Device_SN exist in HR_AttendanceDevices
+			// Verificar que Device_Name y Device_SN existan en HR_AttendanceDevices
 			String deviceName = record.getDevice_Name();
 			String deviceSN = record.getDevice_SN();
 
@@ -201,16 +155,16 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 			//X_HR_AttendanceDevices device = new Query(getCtx(), X_HR_AttendanceDevices.Table_Name, "Name=? AND Device_SN=?", get_TrxName()).setParameters(deviceName, deviceSN).first();
 			
 			if (!attendanceDevices.containsKey(deviceName)) {
-				// If device does not exist, create a new one
-				log.warning("Device not found. Inserting new device: " + deviceName + " with SN: " + deviceSN);
+				// Si el dispositivo no existe, crear uno nuevo
+				log.warning("Dispositivo no encontrado. Insertando nuevo dispositivo: " + deviceName + " con SN: " + deviceSN);
 
 				X_HR_AttendanceDevices newDevice = new X_HR_AttendanceDevices(getCtx(), 0, get_TrxName());
 				newDevice.setName(deviceName);
 				newDevice.setDevice_SN(deviceSN);
-				newDevice.saveEx(); // Save new device
+				newDevice.saveEx(); // Guardar el nuevo dispositivo
 				attendanceDevices.put(deviceName, deviceSN);
-				//deviceID = newDevice.getHR_AttendanceDevices_ID(); // Get new device ID
-				log.info("New device created with ID: " + newDevice.get_ID());
+				//deviceID = newDevice.getHR_AttendanceDevices_ID(); // Obtener el nuevo ID del dispositivo
+				log.info("Nuevo dispositivo creado con ID: " + newDevice.get_ID());
 				
 			}
 			
@@ -236,7 +190,7 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 					al.setTime1(time1);
 
 					al.saveEx();
-					this.statusUpdate("Processing record: "+String.valueOf(processed++)+"/"+String.valueOf(notprocessed) +" "+ employed.getValue() + " " + employed.getName() + " " + al.getAttendanceDate());
+					this.statusUpdate("Procesando registro: "+String.valueOf(processed++)+"/"+String.valueOf(notprocessed) +" "+ employed.getValue() + " " + employed.getName() + " " + al.getAttendanceDate());
 					day = dateFormat2.format(parsedDate);
 					emp = hrClockCode;
 					alID = al.get_ID();
@@ -279,7 +233,7 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 
 			}
 
-			// Mark as processed only if employee was found
+			// Marcar como procesado solo si el empleado fue encontrado
 			record.set_ValueNoCheck("Processed", true);
 			record.saveEx();
 
@@ -300,13 +254,6 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 		return null;
 	}
 
-	/**
-	 * Calculates the difference between shift hours and actual attendance hours.
-	 * 
-	 * @param attendance attendance line record
-	 * @param Shift_ID shift definition ID
-	 * @return difference in hours, accounting for tolerance
-	 */
 	protected BigDecimal getDifference(MHR_AttendanceLine attendance, int Shift_ID) {
 		String WeekDay = getWeekDayValue(attendance.getWeekDay());
 		if (WeekDay == null)
@@ -317,12 +264,6 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 		return (diference.compareTo(BigDecimal.ZERO) > 0) ? diference : BigDecimal.ZERO;
 	}
 
-	/**
-	 * Resolves the week day reference value from a Date.
-	 * 
-	 * @param WeekDayStr date to evaluate
-	 * @return reference value (e.g. "1" for Monday)
-	 */
 	protected String getWeekDayValue(java.util.Date WeekDayStr) {
 		Timestamp time = new Timestamp(WeekDayStr.getTime());
 		LocalDateTime attendancedateaux = time.toLocalDateTime();
@@ -336,12 +277,6 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 		return null;
 	}
 
-	/**
-	 * Resolves the week day reference value from a string name.
-	 * 
-	 * @param WeekDayStr day name (e.g. "Monday")
-	 * @return reference value
-	 */
 	protected String getWeekDayValue(String WeekDayStr) {
 		List<MRefList> reflist = new Query(getCtx(), MRefList.Table_Name, "AD_Reference_ID=?", get_TrxName()).setParameters(167).list();
 
@@ -351,13 +286,6 @@ public class ImportAttendanceFromI_Attendance extends CustomProcess {
 		}
 		return null;
 	}
-
-	/**
-	 * Reconciles clock-out times if they are missing by moving time2/time3 data 
-	 * to time4 if appropriate.
-	 * 
-	 * @param al attendance line to check
-	 */
 	protected void checkLastAttendanceTime(MHR_AttendanceLine al) {
 		
 		//Check if the last hour has data
