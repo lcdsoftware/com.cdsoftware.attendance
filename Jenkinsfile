@@ -21,19 +21,19 @@ pipeline {
             steps {
                              
                 dir ('d2'){
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.payroll.git']])                           
+                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.payroll.git']])                           
                 }
                 dir ('d3'){
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.base.git']])             
+                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.base.git']])             
                 }  
                 dir ('d4'){
                     git branch: '10.0.0', url: 'https://github.com/egil0902/globalqss-idempiere-lco.git'             
                 }  
                  dir ('d5'){
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.location.git']])             
+                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.location.git']])             
                 }
                  dir ('d6'){
-                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:cdsoftware/com.cdsoftware.pluginconfig.git']])             
+                    checkout scmGit(branches: [[name: '*/10.0.0']], extensions: [], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.pluginconfig.git']])             
                 } 
                 dir('target-platform') {
                     git branch: '10', url: 'https://github.com/ingeint/idempiere-target-platform-plugin.git'
