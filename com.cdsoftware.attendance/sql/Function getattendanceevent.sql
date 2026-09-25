@@ -133,6 +133,10 @@ IF(p_returnValue='type') THEN
 	--Salida temprana injustificada = tiene marcación de salida previa a la hora de salida segun horario y no justificada por una solicitud			
 	IF(v_endtime is not null and v_endtime<v_endturn AND v_hasrequest is false) THEN
 		v_event = v_event||' SI';
+	--Salida temprana justificada = tiene marcación de salida previa a la hora de salida segun horario y justificada por una solicitud	
+	ELSE IF(v_endtime is not null and v_endtime<v_endturn AND v_hasrequest is true) THEN
+		v_event = v_event||' SJ';
+		END IF;
 	END IF;
 END IF;
 
@@ -146,3 +150,4 @@ $BODY$;
 
 ALTER FUNCTION adempiere.getattendanceevent(numeric, numeric, character varying)
     OWNER TO adempiere;
+
