@@ -2,7 +2,7 @@ pipeline {
     agent any 
     environment {
         PLUGIN_NAME = "com.cdsoftware.attendance"
-        PLUGIN_NAME2 = "com.cdsoftware.payroll"
+        PLUGIN_NAME2 = "ghintech-idempiere-payroll""
         PLUGIN_NAME3 = "com.cdsoftware.base"
         PLUGIN_NAME4 = "org.globalqss.idempiere.LCO.detailednames"
         PLUGIN_NAME5 = "com.cdsoftware.location"
@@ -14,7 +14,7 @@ pipeline {
             steps {
                 // Todas las dependencias usando HTTPS y tu credencial de GitHub App ('jenkins')
                 dir ('d2') {
-                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.payroll.git']])                            
+                    checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'git@bitbucket.org:ghintech/ghintech-idempiere-payroll.git']])                            
                 }
                 dir ('d3') {
                     checkout scmGit(branches: [[name: '*/12.0.0']], userRemoteConfigs: [[credentialsId: 'jenkins', url: 'https://github.com/lcdsoftware/com.cdsoftware.base.git']])              
