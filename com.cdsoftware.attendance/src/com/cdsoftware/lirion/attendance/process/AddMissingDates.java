@@ -1,27 +1,3 @@
-/**********************************************************************
- * This file is part of iDempiere ERP Open Source                      *
- * http://www.idempiere.org                                            *
- *                                                                     *
- * Copyright (C) Contributors                                          *
- *                                                                     *
- * This program is free software; you can redistribute it and/or       *
- * modify it under the terms of the GNU General Public License         *
- * as published by the Free Software Foundation; either version 2      *
- * of the License, or (at your option) any later version.              *
- *                                                                     *
- * This program is distributed in the hope that it will be useful,     *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
- * GNU General Public License for more details.                        *
- *                                                                     *
- * You should have received a copy of the GNU General Public License   *
- * along with this program; if not, write to the Free Software         *
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
- * MA 02110-1301, USA.                                                 *
- *                                                                     *
- * Contributors:                                                       *
- * - Casa del Software                                                 *
- **********************************************************************/
 package com.cdsoftware.lirion.attendance.process;
 
 import java.sql.PreparedStatement;
@@ -50,39 +26,65 @@ import com.cdsoftware.lirion.attendance.model.MGH_ShiftsLine;
 import com.cdsoftware.lirion.attendance.model.MHR_Attendance;
 import com.cdsoftware.lirion.attendance.model.MHR_AttendanceLine;
 import com.cdsoftware.lirion.attendance.model.MHR_C_BPartnerShifts;
-
 /**
- * Server process to automatically generate attendance lines for missing dates.
- * It identifies active employees in payroll for a specific date range,
- * checks their assigned shifts (MHR_C_BPartnerShifts), and creates attendance 
- * records (MHR_AttendanceLine) if they are missing and the day is not a rest 
- * day or holiday (C_NonBusinessDay).
- * 
- * This process can also be used to purge empty attendance records within a range.
+ * Proceso: AddMissingDates
+ * ---------------------------------------
+ * Descripción:
+ * Este proceso genera automáticamente líneas de asistencia ({@code HR_AttendanceLine}) 
+ * para fechas faltantes dentro de un rango dado, utilizando una cabecera de asistencia 
+ * existente ({@code HR_Attendance}) o creando una nueva si no existe y se trabaja por rango.
  *
- * @author Ángel Lara
+ * Para cada día en el rango indicado, el proceso:
+ * - Obtiene la lista de empleados activos en nómina para esa fecha.
+ * - Verifica si tienen turnos asignados y que no sea día de descanso según el turno.
+ * - Crea una línea de asistencia si no existe para ese empleado en esa fecha.
+ *
+ * Parámetros de entrada:
+ * - {@code HR_Attendance_ID} (opcional): ID de cabecera de asistencia. Si se proporciona, 
+ *   se usa como base para el rango de fechas y la inserción de líneas.
+ * - {@code DateFrom}, {@code DateTo} (opcional): Rango de fechas. Obligatorio si no se proporciona la cabecera.
+ *
+ * Comportamiento:
+ * - Si se proporciona un {@code HR_Attendance_ID}:
+ *   - Se valida que tenga fechas definidas ({@code DateFrom}, {@code DateTo}).
+ *   - Se usa ese rango para procesar.
+ * - Si no se proporciona la cabecera pero sí un rango de fechas:
+ *   - Para cada día, se busca una cabecera de asistencia existente.
+ *   - Si no existe una cabecera para esa fecha, se crea automáticamente.
+ * - Para cada fecha:
+ *   - Se obtienen empleados activos y en nómina.
+ *   - Se valida si tienen un turno asignado para ese día (no es día de descanso).
+ *   - Se verifica si ya existe una línea de asistencia.
+ *   - Si no existe, se crea con 0 horas trabajadas y se asigna el día de la semana.
+ *
+ * Notas técnicas:
+ * - Usa consultas SQL directas con {@code DISTINCT ON} para optimizar la selección de empleados.
+ * - El día de la semana se determina a partir de la referencia {@code AD_Reference_ID=167} (valores estándar de días).
+ * - El sistema usa la zona horaria local definida en {@code ZoneId.systemDefault()}.
+ *
+ * Validaciones:
+ * - Si no se especifica ni {@code HR_Attendance_ID} ni un rango de fechas, el proceso lanza error.
+ * - Si {@code HR_Attendance_ID} se proporciona pero la cabecera no tiene fechas válidas, lanza error.
+ *
+ * Resultado:
+ * - Devuelve un mensaje indicando cuántas líneas de asistencia fueron creadas en total.
+ *
+ * Autor: Ángel Lara  
+ * Proyecto: Módulo de Asistencia
  */
+
 @org.adempiere.base.annotation.Process
 public class AddMissingDates extends CustomProcess{
+
 
 	private int p_HR_Attendance_ID=0;
 	private Timestamp p_DateFrom;
 	private Timestamp p_DateTo;
 	MHR_Attendance attendance;
 	private boolean delete = false;
-
-	/**
-	 * Reads the process parameters required for missing date generation or purging.
-	 * 
-	 * Parameters:
-	 * - HR_Attendance_ID: Specific attendance header record ID. If provided, the date range 
-	 *                     is taken from this record's DateFrom and DateTo.
-	 * - DateFrom: Start date of the range (and end date if no 'To' parameter is provided).
-	 * - delete: If true, the process deletes empty attendance lines (TotalQtyOfHours = 0) 
-	 *           and headers without lines instead of generating new ones.
-	 */
 	@Override
 	protected void prepare() {
+		// TODO Auto-generated method stub
 		ProcessInfoParameter[] parameters = getParameter();
 		for (ProcessInfoParameter para: parameters)
 		{
@@ -100,23 +102,6 @@ public class AddMissingDates extends CustomProcess{
 
 	}
 
-	/**
-	 * Executes the attendance record generation or deletion logic.
-	 * 
-	 * Logic flow:
-	 * 1. If 'delete' is true:
-	 *    - Removes HR_AttendanceLine records with zero hours in the date range.
-	 *    - Removes HR_Attendance headers that no longer have lines.
-	 * 2. If generating:
-	 *    - Determines the date range (from parameters or HR_Attendance header).
-	 *    - Filters out holidays (C_NonBusinessDay).
-	 *    - For each remaining date, identifies active employees with assigned shifts.
-	 *    - Creates an MHR_AttendanceLine for each missing date/employee combination 
-	 *      if the day is not a rest day in their shift configuration.
-	 * 
-	 * @return A summary message of the operations performed.
-	 * @throws Exception if an error occurs during database operations.
-	 */
 	@Override
 	protected String doIt() throws Exception {
 		if(delete) {
@@ -163,14 +148,14 @@ public class AddMissingDates extends CustomProcess{
 			listNonBusiness.add(NonBussiness.getDate1().toLocalDateTime().toLocalDate());
 		}
 		
-        // Remove from the list of days the elements that are in the holiday list
+        // Eliminar de Lista de dias los elementos que están en el listado de dias feriados
 		p_dateList.removeAll(listNonBusiness);
         
 		for(LocalDate fecha:p_dateList) {
 			this.statusUpdate("Analizando Dia "+fecha);
 			Timestamp attendanceDate = Timestamp.valueOf(fecha.atStartOfDay());
 			String weekDay = getWeekDayValue(Date.from(fecha.atStartOfDay(defaultZoneId).toInstant()));
-			// For each date, check if the record exists or not
+			//para cada fecha verifico si existe o no el registro
 			if(p_HR_Attendance_ID==0) {
 				attendanceHeader = new Query(getCtx(), MHR_Attendance.Table_Name,"HR_Attendance_ID IN (SELECT HR_Attendance_ID FROM HR_AttendanceLine "
 						+ "WHERE AttendanceDate = '"+fecha+
@@ -185,7 +170,7 @@ public class AddMissingDates extends CustomProcess{
 			}
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;
-			// Search for all employees that were in payroll for the date
+			//buscar todos los empleados que estaban en planilla para la fecha
 			StringBuilder sql = new StringBuilder("SELECT Distinct ON (C_BPartner_ID) bp.C_BPartner_ID,bps.HR_C_BPartnerShifts_ID "
 					+ " FROM C_BPartner bp "
 					+ " LEFT JOIN AD_User u ON u.C_BPartner_ID=bp.C_BPartner_ID AND IsInPayroll='Y'"
@@ -248,25 +233,11 @@ public class AddMissingDates extends CustomProcess{
 		return "Proceso Finalizado. Creados "+count+" Registros.";
 	}
 
-	/**
-	 * Generates a list of all dates between the specified start and end dates.
-	 * 
-	 * @param startDate the beginning of the range
-	 * @param endDate the end of the range
-	 * @return list of dates inclusive of both bounds
-	 */
 	public static List<LocalDate> getDatesBetween(LocalDate startDate, LocalDate endDate) {
 	    return startDate.datesUntil(endDate.plus(1,ChronoUnit.DAYS))
 	    	      .collect(Collectors.toList());
 	}
 
-	/**
-	 * Resolves the iDempiere reference value for a given date's day of the week.
-	 * It maps Java's DayOfWeek to the values defined in AD Reference 167.
-	 * 
-	 * @param WeekDayStr the date to evaluate
-	 * @return the value string from the reference list, or null if not found
-	 */
 	protected String getWeekDayValue(Date WeekDayStr) {
 		Timestamp time = new Timestamp(WeekDayStr.getTime());
 		LocalDateTime attendancedateaux = time.toLocalDateTime();
